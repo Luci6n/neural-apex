@@ -2,19 +2,54 @@
 
 ## Automated
 
-- npm run lint: TypeScript project check
-- npm test: deterministic autonomous-simulation tests
-- npm run build: production frontend
-- npm run test:e2e: two complete strategy runs, live GPT text, and comparison
-- docker compose build: clean container build
+| Command | Purpose |
+| --- | --- |
+| npm run lint | TypeScript project check |
+| npm test -- --run | Deterministic simulation and circuit topology suite |
+| npm run build | Production frontend and lazy 3D chunks |
+| npm run test:e2e | Route, race, strategy, streaming, pit, debrief, and comparison flow |
+| python -m py_compile backend/main.py | FastAPI syntax check |
+| docker compose build | Reproducible full-stack container |
 
-Unit tests verify autonomous movement without input, decision-window pause and pit consequences, and comparable run records.
+## Unit and topology matrix
 
-The E2E test verifies setup changes, automatic progress, high-level pace command, GPT-5.6 conflict explanation, pit and stay-out choices, debrief cards, setup adjustment, and previous-vs-current comparison.
+| Area | Required assertions |
+| --- | --- |
+| Movement | Cars progress without input; speed changes with curvature; racing line leaves centre but remains in bounds |
+| Setup | Tyre/fuel/aero/session/priority/style change predicted pace or risk |
+| Weather | Same seed reproduces; new seed varies; rain changes temperatures/humidity/grip |
+| Strategy | Multi-lap runs receive one compound-timed review; numbered escalation works; votes can agree or conflict |
+| Pit | Request queues; cancel works before entry; tyre changes only at service; limiter and penalty are recorded |
+| Traffic | Stable passing side; separation; minor damage; major retirement and player DNF |
+| Stewards | Three limits add five seconds; pit speed over 80 adds five seconds; final time includes penalties |
+| Circuits | Raw centre, spline, road edges, pit lane, and pit service segment remain non-crossing |
+| Records | Completed setup and outcome can be compared on the next run |
+
+## End-to-end flows
+
+The Playwright suite covers:
+
+1. main → tutorial → setup route behavior;
+2. a complete autonomous run with a queued pit and service-bay tyre change;
+3. streamed race-engineer explanation and post-race debrief;
+4. setup adjustment and previous/current comparison;
+5. a second stay-out run;
+6. responsive strategy-window layout and AI-rail/telemetry separation.
+
+Latest automated result: 46/46 Vitest assertions and 3/3 Playwright flows pass.
 
 ## API
 
-Health must report configuration without returning a secret. Explain and debrief must return source openai with a working key and local-fallback otherwise.
+Health must report configuration without returning a secret. Explain and debrief return source openai with a working key and local-fallback otherwise.
+
+Streaming verification checks:
+
+- first event communicates status;
+- one or more delta events arrive before completion;
+- complete carries a schema-valid payload;
+- alignment and per-system verdicts match allowed values;
+- no secret appears in response or client bundle;
+- every request includes current setup, race, weather, evidence, racers, penalties, and decisions.
 
 ## Visual QA
 
@@ -27,7 +62,29 @@ Latest autonomous snapshots:
 - Console errors: none
 - Page errors: none
 
+The final visual matrix must include all three circuits and:
+
+- tyre contact at flat road, incline, crest, and pit lane;
+- no tree, building, grandstand, or pit complex on road;
+- no instanced-tree flicker with shadows left behind;
+- no curb/pit ribbon crossing or z-fighting;
+- natural straight, sweeper, medium-corner, and hairpin speeds;
+- smooth outside–apex–outside line;
+- no normal car overlap or left/right warp;
+- intro at 1680×900, setup desktop/tablet, race desktop/mobile;
+- strategy window with long streamed text at narrow height.
+
 ## Manual
 
-Complete a natural-speed Guided run, pause/resume, try all three pace commands, test both weather decisions, adjust the setup, and confirm comparison text remains understandable.
+Complete a natural-speed Guided run, pause/resume, try all three pace commands, call and cancel Box, complete a pit stop, test agreement/conflict/stay-out paths, trigger a penalty, adjust the setup, and confirm comparison text remains understandable.
 
+## Release gate
+
+A release is ready only when:
+
+- lint, unit/topology tests, build, backend compile, and E2E pass;
+- live OpenAI streaming is verified when a key is configured;
+- Docker builds;
+- screenshots pass the visual matrix;
+- README verification counts match the latest run;
+- PRD, architecture, API, calculations, tutorial, AI, design, changelog, and checklist match shipped behavior.

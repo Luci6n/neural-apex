@@ -24,13 +24,13 @@ The systems deliberately disagree. A prediction can warn about future rain while
 
 1. Choose a guided tutorial, quick start, or free race lab.
 2. Select a test run, qualifying simulation, or race.
-3. Configure starting tyres, fuel load, aero balance, weather policy, scanner focus, and adaptive-driver priority.
+3. Configure 1–32 laps, starting tyres, fuel, aero, weather policy, scanner focus, adaptive priority, and driver style.
 4. Populate the autonomous grid with one click.
 5. Review the Predictor’s expected lap and risk estimates.
 6. Launch the run. Every car drives itself.
 7. Watch position, lap time, racing line, tyre wear, fuel, grip, detections, and adaptation.
-8. Send high-level pit-wall commands: push pace, hold plan, or conserve tyres.
-9. Resolve the rain conflict by pitting for wets or staying out.
+8. Send high-level pit-wall commands: push pace, hold plan, conserve tyres, or manually Box this lap for any compound.
+9. Resolve conditional strategy windows when meaningful evidence changes; the systems may agree or disagree.
 10. Review a GPT-5.6 post-race debrief.
 11. Change the setup and rerun to compare the new result with the previous experiment.
 
@@ -39,13 +39,17 @@ The systems deliberately disagree. A prediction can warn about future rain while
 - Blocky low-poly 3D circuit rendered with Three.js and React Three Fiber
 - Autonomous player car and autonomous rival grid
 - Setup-driven pace, tyre wear, fuel use, grip, and racing-line behaviour
+- Curvature-based braking/acceleration and Cautious, Balanced, or Aggressive autonomous driver styles
+- Three enlarged non-crossing circuits inspired by Spa, Silverstone, and Barcelona
+- C1-C5, Intermediate, and Full Wet compounds with visible weather consequences
 - Test run, qualifying, and race session choices
 - Rookie, balanced, competitive, and adaptive bot presets
 - Live ML, DL, and RL-inspired signal rail
 - High-level pace and tyre-conservation commands
-- Paused strategy window with deliberately conflicting AI recommendations
-- Live GPT-5.6 race-engineer explanation
-- Five-part GPT-5.6 post-race debrief with deterministic fallback
+- Queued “Box, box” calls, pit entry, pit limiter, track limits, time penalties, contact, damage, and retirement
+- Numbered event-driven strategy windows where AI recommendations may agree or conflict
+- Progressively streamed GPT-5.6 race-engineer explanation with structured evidence
+- Progressively streamed five-part GPT-5.6 post-race debrief with explicit deterministic fallback
 - Previous-run benchmark and setup/outcome comparison
 - Guided beginner tutorial language
 - FastAPI boundary for OpenAI calls
@@ -85,13 +89,13 @@ The browser owns deterministic gameplay. The FastAPI service owns language gener
                     |
                     v
               FastAPI service
-        /api/health /explain /debrief
+     /api/health /explain[/stream] /debrief[/stream]
                     |
                     v
           OpenAI Responses API
                 GPT-5.6
 
-GPT-5.6 never controls a car, chooses a strategy, calculates a result, or changes score. It receives compact facts from the completed deterministic simulation and explains them in plain language.
+GPT-5.6 never controls a car, chooses a strategy, calculates a result, or changes score. It receives the complete relevant current/final snapshot and explains it in plain language through validated structured output.
 
 ## Repository structure
 
@@ -110,8 +114,10 @@ GPT-5.6 never controls a car, chooses a strategy, calculates a result, or change
     │   ├── testing.md
     │   └── tutorial-flow.md
     ├── src/
-    │   ├── components/              Reusable 3D scene
+    │   ├── components/              Reusable 3D scenes, circuit maps, and AI instruments
     │   ├── features/
+    │   │   ├── intro/               Registration and 3D product introduction
+    │   │   ├── tutorial/            Visual beginner briefing
     │   │   ├── setup/               Experiment configuration
     │   │   ├── race/                Pit wall and autonomous run
     │   │   └── debrief/             Learning and run comparison
@@ -119,7 +125,8 @@ GPT-5.6 never controls a car, chooses a strategy, calculates a result, or change
     │   ├── services/                FastAPI client boundary
     │   ├── App.tsx
     │   └── styles.css
-    ├── tests/e2e/                    Two-run autonomous strategy test
+    ├── tests/e2e/                    Routed two-run autonomous strategy test
+    ├── CHANGELOG.md
     ├── Dockerfile
     ├── docker-compose.yml
     └── package.json
@@ -200,6 +207,8 @@ Accepts completed-run facts: setup, events, position, lap time, tyre/fuel state,
 
 See docs/api-contract.md for payload examples and trust boundaries.
 
+For the exact effect of every mode, setup choice, weather variable, driver style, strategy window, pit phase, and incident factor, see [Gameplay calculations and experiment modes](docs/gameplay-calculations.md).
+
 ## Scripts
 
 | Command | Purpose |
@@ -219,8 +228,9 @@ See docs/api-contract.md for payload examples and trust boundaries.
 Current verified checks:
 
 - TypeScript: pass
-- Simulation tests: 3/3 pass
+- Simulation and circuit tests: 46/46 pass
 - Production build: pass
+- Playwright autonomous flows: 3/3 pass
 - Live OpenAI request through FastAPI: pass, source openai
 - Full E2E: pass, including two runs and comparison
 - Desktop WebGL canvas: nonblank, zero console/page errors
@@ -251,7 +261,7 @@ For the detailed development record, boundaries, prompts, fallbacks, verificatio
 - The ML, DL, and RL systems are educational simulations using deterministic formulas, rules, and state changes; no model is trained in the browser.
 - One Sudden Rain scenario is fully implemented.
 - Vehicle movement is kinematic and waypoint-based, not realistic motorsport physics.
-- Run history is held in browser memory and resets on refresh.
+- Run history and the latest result are session-scoped; closing the browser session clears them.
 - Bot adaptation is lightweight and scenario-scoped.
 - The Three.js race chunk is still large, but it is lazy-loaded so the setup screen ships in a much smaller initial bundle. Further vendor splitting is a post-MVP optimisation.
 - Real-time multiplayer, careers, detailed damage, and user-created tracks are out of scope.
@@ -268,6 +278,7 @@ For the detailed development record, boundaries, prompts, fallbacks, verificatio
 
 ## Documentation
 
+- Product and visual design system: [DESIGN.md](DESIGN.md)
 - Current PRD: docs/PRD_v2.md
 - Architecture: docs/architecture.md
 - Gameplay loop: docs/gameplay-loop.md
@@ -277,11 +288,16 @@ For the detailed development record, boundaries, prompts, fallbacks, verificatio
 - Tutorial: docs/tutorial-flow.md
 - Setup and deployment: docs/setup-and-deployment.md
 - Testing: docs/testing.md
+- Development checklist: docs/development-checklist.md
+- Gameplay calculations and experiment modes: docs/gameplay-calculations.md
 - Codex and GPT-5.6 usage: docs/codex-and-gpt-usage.md
 - Autonomous-strategy decision: docs/decisions/002-autonomous-strategy-loop.md
+- Seeded simulation and streamed-AI decision: docs/decisions/003-seeded-simulation-and-streamed-ai.md
 
 ## Built with
 
 React, TypeScript, Vite, Three.js, React Three Fiber, FastAPI, the OpenAI Responses API, Vitest, Playwright, and Docker.
 
 The submission should include the primary Codex /feedback Session ID required by the competition form.
+
+See [CHANGELOG.md](CHANGELOG.md) for the implementation history.

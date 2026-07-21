@@ -1443,3 +1443,13 @@ Mitigation:
 ## 31. Product Pitch
 
 > Neural Apex is a blocky 3D racing strategy game where beginners learn how Machine Learning predicts, Deep Learning recognises patterns, and Reinforcement Learning adapts—by running their own AI-powered race team.
+# Implementation addendum — seeded long runs and streamed AI (2026-07-21)
+
+- Runs support 1–32 laps, including 8/16/24/32 presets.
+- Guided, Quick Start, and Free Lab share the same physics; Guided adds coaching/policy-line visualization, Quick Start applies a visible balanced preset, and Free Lab minimizes assistance.
+- Driver style is separate from RL priority. Cautious/Balanced/Aggressive styles affect local braking, acceleration, overtaking, fuel, tyre wear, track limits, and incident risk.
+- Cars calculate speed from local circuit curvature and progressively brake/accelerate.
+- Strategy windows are evidence-driven, numbered, spaced, and lap-scaled. Sessions of three laps or more guarantee one compound-timed baseline review: soft family at roughly 25%, Medium at 50%, hard family at 75%, and wet compounds near 33%; weather or grip evidence may pull it earlier. Later windows require escalating evidence. A window may contain agreement or conflict and does not force a pit recommendation.
+- Manual Box this lap is always available with any compound, current calculated advice, streamed GPT-5.6 context, and cancellation before pit entry.
+- Pit stops use an 80 km/h limiter phase, service-bay hold, tyre fit, and limiter exit.
+- All strategy/debrief GPT calls receive the complete relevant race state and return Pydantic-validated output. Streaming endpoints provide visible loading and progressive text. GPT never mutates gameplay.

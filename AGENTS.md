@@ -52,10 +52,10 @@ Do not add major features until the core loop works.
 
 The MVP must include:
 
-- one blocky 3D circuit;
+- three enlarged, non-crossing blocky 3D circuits;
 - one player team;
 - at least three bot opponents;
-- one short autonomous race or test run;
+- one 1-8 lap autonomous race, qualifying session, or test run;
 - pre-run tyre, fuel, aero, AI-priority, and strategy choices;
 - telemetry and setup consequences visible during the run;
 - at least one rerun comparison;
@@ -79,10 +79,10 @@ The MVP must include:
 Do not implement unless the MVP is already stable:
 
 - real-time multiplayer;
-- multiple circuits;
+- additional circuits beyond the implemented three;
 - full career mode;
 - realistic racing physics;
-- advanced damage simulation;
+- realistic mechanical-damage simulation beyond minor contact, major accidents, and retirement;
 - staff hiring;
 - contracts;
 - detailed finances;
