@@ -29,7 +29,9 @@ export function DebriefScreen({
 
   useEffect(() => {
     let alive = true
-    requestDebrief(resolvedRace, config)
+    setCoach('')
+    setLoading(true)
+    requestDebrief(resolvedRace, config, (delta) => alive && setCoach((current) => current + delta))
       .then((data) => {
         if (!alive) return
         setCoach(data.debrief || debrief.lesson)
@@ -68,8 +70,8 @@ export function DebriefScreen({
       </section>
 
       <section className="decision-review">
-        <div><p className="section-label">Your call · {debrief.decision === 'pit-intermediate' ? 'Pit for intermediates' : debrief.decision === 'pit-wet' ? 'Pit for full wets' : 'Stay out'}</p><h2>{debrief.lesson}</h2></div>
-        <div className="coach-summary"><span>POST-RACE COACH · {source === 'openai' ? 'GPT-5.6' : 'LOCAL'}</span>{loading ? <p>Comparing prediction, detection, adaptation, setup, and your strategy…</p> : <SafeRichText text={coach} />}</div>
+        <div><p className="section-label">Your call · {debrief.decision === 'pit-dry' ? 'Pit for C3 Medium' : debrief.decision === 'pit-intermediate' ? 'Pit for intermediates' : debrief.decision === 'pit-wet' ? 'Pit for full wets' : 'Stay out'}</p><h2>{debrief.lesson}</h2></div>
+        <div className={'coach-summary' + (loading ? ' streaming' : '')}><span>POST-RACE COACH · {source === 'openai' ? 'GPT-5.6' : loading ? 'CONNECTING' : 'LOCAL'}</span>{coach ? <SafeRichText text={coach} /> : <p className="ai-loading"><i /> Comparing prediction, detection, adaptation, setup, and your strategy…</p>}</div>
       </section>
 
       <footer className="debrief-actions">

@@ -1,14 +1,15 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import { advanceRace, createRace, resolveDecision } from '../game/simulation'
-import { createTrackCurve } from '../game/tracks'
-import type { RaceConfig, RaceDecision, RaceSnapshot, StrategyCommand } from '../game/types'
+import { advanceRace, cancelPitStop, createRace, evaluateSystemAdvice, requestPitStop, resolveDecision } from '../game/simulation'
+import { createPitLaneLayout, createTrackCurve, racingLineOffsetAt } from '../game/tracks'
+import type { RaceConfig, RaceDecision, RaceSnapshot, StrategyCommand, TyreCompound } from '../game/types'
 
 interface RaceSceneProps {
   config: RaceConfig
   strategy: StrategyCommand
   decision: RaceDecision | null
+  pitCommand: { id: number; tyre: TyreCompound | null }
   paused: boolean
   onSnapshot: (snapshot: RaceSnapshot) => void
   onNeedDecision: () => void
@@ -33,16 +34,21 @@ function RaceWorld({
   config,
   strategy,
   decision,
+  pitCommand,
   paused,
   onSnapshot,
   onNeedDecision,
   onFinish,
 }: RaceSceneProps) {
   const curve = useMemo(() => createTrackCurve(config.circuit), [config.circuit])
+  const pitLayout = useMemo(() => createPitLaneLayout(curve), [curve])
+  const pitCurve = pitLayout.curve
+  const pitSide = pitLayout.side
   const road = useMemo(() => createStripGeometry(curve, -3.6, 3.6, 300), [curve])
-  const innerCurb = useMemo(() => createStripGeometry(curve, -4, -3.6, 300), [curve])
-  const outerCurb = useMemo(() => createStripGeometry(curve, 3.6, 4, 300), [curve])
-  const racingLine = useMemo(() => createStripGeometry(curve, -0.065, 0.065, 240), [curve])
+  const innerCurb = useMemo(() => createStripGeometry(curve, -3.58, -3.18, 360), [curve])
+  const outerCurb = useMemo(() => createStripGeometry(curve, 3.18, 3.58, 360), [curve])
+  const racingLine = useMemo(() => createRacingLineGeometry(curve, config.circuit, 240), [curve, config.circuit])
+  const pitRoad = useMemo(() => createTaperedStripGeometry(pitCurve, 1.6, 90), [pitCurve])
   const terrain = useMemo(() => createTerrainGeometry(curve), [curve])
   const simulation = useRef(createRace(config))
   const carRefs = useRef<Array<THREE.Group | null>>([])
@@ -51,6 +57,7 @@ function RaceWorld({
   const finishSent = useRef(false)
   const decisionSent = useRef(false)
   const appliedDecision = useRef<RaceDecision | null>(null)
+  const appliedPitCommand = useRef(0)
   const { camera, gl } = useThree()
   const desiredCamera = useMemo(() => new THREE.Vector3(), [])
   const lookAt = useMemo(() => new THREE.Vector3(), [])
@@ -74,11 +81,10 @@ function RaceWorld({
       setState: (name: string) => {
         const state = simulation.current
         if (name === 'decision') {
-          state.racers[0].progress = 0.619
-          state.playerProgress = 0.619
-          state.lapProgress = 0.619
-          state.needsDecision = false
+          state.needsDecision = true
           state.decision = null
+          state.strategyWindowCount = Math.max(1, state.strategyWindowCount)
+          state.adviceAlignment = evaluateSystemAdvice(state, config).alignment
           decisionSent.current = false
         }
         if (name === 'finish') {
@@ -86,7 +92,14 @@ function RaceWorld({
           state.playerProgress = state.totalLaps - 0.001
           state.lapProgress = 0.999
           state.needsDecision = false
+          state.decisionPoint = state.totalLaps + 1
+          state.strategyWindowCount = state.strategyWindowLimit
           finishSent.current = false
+        }
+        if (name === 'pit-entry' && state.pitRequested && state.pitEntryProgress !== null) {
+          state.racers[0].progress = state.pitEntryProgress + 0.001
+          state.playerProgress = state.racers[0].progress
+          state.lapProgress = THREE.MathUtils.euclideanModulo(state.racers[0].progress, 1)
         }
       },
     }
@@ -103,6 +116,14 @@ function RaceWorld({
     }
   }, [decision, onSnapshot])
 
+  useEffect(() => {
+    if (pitCommand.id === 0 || pitCommand.id === appliedPitCommand.current) return
+    if (pitCommand.tyre) requestPitStop(simulation.current, pitCommand.tyre)
+    else cancelPitStop(simulation.current)
+    appliedPitCommand.current = pitCommand.id
+    onSnapshot(cloneSnapshot(simulation.current))
+  }, [pitCommand, onSnapshot])
+
   useFrame((_, delta) => {
     frameCount.current += 1
     const state = simulation.current
@@ -111,15 +132,17 @@ function RaceWorld({
     state.racers.forEach((racer, index) => {
       const car = carRefs.current[index]
       if (!car) return
-      placeOnTrack(car, curve, racer.progress, racer.lane, point, tangent, normal)
+      if (racer.inPit) placeOnTrack(car, pitCurve, racer.pitLanePhase || 0, 0, point, tangent, normal, false, 0.21)
+      else placeOnTrack(car, curve, racer.progress, racer.lane, point, tangent, normal)
     })
 
     const player = state.racers[0]
-    const trackT = THREE.MathUtils.euclideanModulo(player.progress, 1)
-    curve.getPointAt(trackT, point)
-    curve.getTangentAt(trackT, tangent).normalize()
+    const viewCurve = player.inPit ? pitCurve : curve
+    const trackT = player.inPit ? player.pitLanePhase || 0 : THREE.MathUtils.euclideanModulo(player.progress, 1)
+    viewCurve.getPointAt(trackT, point)
+    viewCurve.getTangentAt(trackT, tangent).normalize()
     normal.set(-tangent.z, 0, tangent.x)
-    point.addScaledVector(normal, player.lane * 2.35)
+    if (!player.inPit) point.addScaledVector(normal, player.lane * 2.35)
     desiredCamera.copy(point).addScaledVector(tangent, -14).add(new THREE.Vector3(0, 11.5, 0))
     lookAt.copy(point).addScaledVector(tangent, 10).add(new THREE.Vector3(0, 0.5, 0))
     camera.position.lerp(desiredCamera, 1 - Math.exp(-delta * 2.8))
@@ -132,13 +155,16 @@ function RaceWorld({
     }
     if (state.needsDecision && !decisionSent.current) {
       decisionSent.current = true
+      appliedDecision.current = null
       onNeedDecision()
     }
+    if (!state.needsDecision) decisionSent.current = false
     if (state.finished && !finishSent.current) {
       finishSent.current = true
       onFinish(cloneSnapshot(state))
     }
 
+    const playerObject = carRefs.current[0]
     const diagnostics = {
       frame: frameCount.current,
       phase: state.finished ? 'finished' : state.needsDecision ? 'decision' : 'racing',
@@ -148,9 +174,11 @@ function RaceWorld({
       complete: state.finished,
       fail: false,
       player: {
-        x: state.racers[0].lane,
-        y: 0,
-        z: state.playerProgress,
+        x: playerObject?.position.x ?? 0,
+        y: playerObject?.position.y ?? 0,
+        z: playerObject?.position.z ?? 0,
+        inPit: state.racers[0].inPit,
+        pitLanePhase: state.racers[0].pitLanePhase ?? 0,
       },
       renderer: {
         calls: gl.info.render.calls,
@@ -187,20 +215,17 @@ function RaceWorld({
       <mesh geometry={terrain} receiveShadow>
         <meshStandardMaterial color="#5e963e" roughness={1} />
       </mesh>
-      <mesh geometry={road} receiveShadow>
+      <mesh geometry={road} position-y={0.22} receiveShadow renderOrder={2}>
         <meshStandardMaterial color={state.rain > 0.12 ? '#172a38' : '#273745'} roughness={state.rain > 0.12 ? 0.48 : 0.86} metalness={state.rain > 0.12 ? 0.18 : 0.05} side={THREE.DoubleSide} />
       </mesh>
-      <mesh geometry={innerCurb} position-y={0.025} receiveShadow>
-        <meshStandardMaterial color="#f1e4c5" roughness={0.82} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh geometry={outerCurb} position-y={0.025} receiveShadow>
-        <meshStandardMaterial color="#f46b47" roughness={0.82} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh geometry={racingLine} position-y={0.045}>
-        <meshBasicMaterial color="#54e6ef" transparent opacity={0.42} side={THREE.DoubleSide} />
-      </mesh>
+      <mesh geometry={innerCurb} position-y={0.245} receiveShadow><meshStandardMaterial color="#f1e4c5" roughness={0.82} side={THREE.DoubleSide} /></mesh>
+      <mesh geometry={outerCurb} position-y={0.245} receiveShadow><meshStandardMaterial color="#f46b47" roughness={0.82} side={THREE.DoubleSide} /></mesh>
+      {config.mode === 'guided' && <mesh geometry={racingLine} position-y={0.265}>
+        <meshBasicMaterial color="#54e6ef" transparent opacity={0.3} side={THREE.DoubleSide} />
+      </mesh>}
+      <mesh geometry={pitRoad} position-y={0.21} receiveShadow renderOrder={1}><meshStandardMaterial color="#394750" roughness={0.82} side={THREE.DoubleSide} polygonOffset polygonOffsetFactor={1} polygonOffsetUnits={1} /></mesh>
 
-      <WorldKit curve={curve} circuit={config.circuit} rain={state.rain} windKph={state.windKph} />
+      <WorldKit curve={curve} pitCurve={pitCurve} pitSide={pitSide} circuit={config.circuit} rain={state.rain} windKph={state.windKph} />
       {state.racers.map((racer, index) => (
         <BlockCar
           key={racer.id}
@@ -311,23 +336,40 @@ function WheelSet({ castShadow }: { castShadow: boolean }) {
   )
 }
 
-function WorldKit({ curve, circuit, rain, windKph }: { curve: THREE.CatmullRomCurve3; circuit: RaceConfig['circuit']; rain: number; windKph: number }) {
+function WorldKit({ curve, pitCurve, pitSide, circuit, rain, windKph }: { curve: THREE.CatmullRomCurve3; pitCurve: THREE.Curve<THREE.Vector3>; pitSide: 1 | -1; circuit: RaceConfig['circuit']; rain: number; windKph: number }) {
   const trees = useMemo(
-    () =>
-      Array.from({ length: 22 }, (_, index) => {
-        const t = index / 22
-        const p = curve.getPointAt(t)
+    () => {
+      const terrainSamples = curve.getSpacedPoints(180)
+      const roadSamples = [...curve.getSpacedPoints(300), ...pitCurve.getSpacedPoints(120)]
+      return Array.from({ length: 16 }, (_, index) => {
+        const t = index / 16
+        const origin = curve.getPointAt(t)
         const tangent = curve.getTangentAt(t).normalize()
-        const side = index % 2 === 0 ? 1 : -1
+        const preferredSide = index % 2 === 0 ? 1 : -1
         const normal = new THREE.Vector3(-tangent.z, 0, tangent.x)
-        return p.addScaledVector(normal, side * (9 + (index % 4) * 1.6)).setY(0)
-      }),
-    [curve],
+        let p = origin.clone()
+        let bestClearance = -1
+        let found = false
+        for (const side of [preferredSide, -preferredSide]) {
+          for (let distance = 16 + (index % 3) * 2; distance <= 52; distance += 4) {
+            const candidate = origin.clone().addScaledVector(normal, side * distance)
+            const clearance = nearestHorizontalDistance(candidate, roadSamples)
+            if (clearance > bestClearance) { p = candidate; bestClearance = clearance }
+            if (clearance >= 10) { p = candidate; found = true; break }
+          }
+          if (found) break
+        }
+        p.y = terrainHeightAt(p.x, p.z, terrainSamples)
+        return p
+      })
+    },
+    [curve, pitCurve],
   )
   return (
     <>
       <InstancedForest positions={trees} />
-      <PitComplex curve={curve} circuit={circuit} />
+      <PitComplex curve={pitCurve} side={pitSide} />
+      <TracksideGrandstand curve={curve} />
       <CircuitBackdrop circuit={circuit} rain={rain} />
       <MovingClouds rain={rain} windKph={windKph} />
       <Checkpoint curve={curve} t={0.02} color="#ff633f" />
@@ -343,35 +385,54 @@ function InstancedForest({ positions }: { positions: THREE.Vector3[] }) {
     const dummy = new THREE.Object3D()
     positions.forEach((position, index) => {
       dummy.position.copy(position).add(new THREE.Vector3(0, 1.15, 0)); dummy.scale.set(1, 1, 1); dummy.updateMatrix(); trunks.current?.setMatrixAt(index, dummy.matrix)
-      dummy.position.copy(position).add(new THREE.Vector3(0, 3.2, 0)); dummy.rotation.y = index * .9; dummy.scale.set(1 + index % 3 * .08, 1, 1 + index % 2 * .08); dummy.updateMatrix(); crowns.current?.setMatrixAt(index, dummy.matrix)
+      dummy.position.copy(position).add(new THREE.Vector3(0, 2.9, 0)); dummy.rotation.y = index * .9; dummy.scale.set(.8 + index % 3 * .06, .85, .8 + index % 2 * .06); dummy.updateMatrix(); crowns.current?.setMatrixAt(index, dummy.matrix)
     })
     if (trunks.current) trunks.current.instanceMatrix.needsUpdate = true
     if (crowns.current) crowns.current.instanceMatrix.needsUpdate = true
   }, [positions])
-  return <><instancedMesh ref={trunks} args={[undefined, undefined, positions.length]} castShadow><boxGeometry args={[.55, 2.3, .55]} /><meshStandardMaterial color="#80533b" /></instancedMesh><instancedMesh ref={crowns} args={[undefined, undefined, positions.length]} castShadow><icosahedronGeometry args={[1.55, 0]} /><meshStandardMaterial color="#31824a" roughness={1} /></instancedMesh></>
+  return <><instancedMesh ref={trunks} args={[undefined, undefined, positions.length]} castShadow frustumCulled={false}><boxGeometry args={[.55, 2.3, .55]} /><meshStandardMaterial color="#80533b" /></instancedMesh><instancedMesh ref={crowns} args={[undefined, undefined, positions.length]} castShadow frustumCulled={false}><icosahedronGeometry args={[1.55, 0]} /><meshStandardMaterial color="#31824a" roughness={1} /></instancedMesh></>
 }
 
-function PitComplex({ curve, circuit }: { curve: THREE.CatmullRomCurve3; circuit: RaceConfig['circuit'] }) {
-  const placement = useMemo(() => {
-    const settings = circuit === 'ardennes' ? [.965, -12] : circuit === 'british' ? [.96, 12] : [.035, -12]
-    return trackPlacement(curve, settings[0], settings[1])
-  }, [circuit, curve])
+function PitComplex({ curve, side }: { curve: THREE.Curve<THREE.Vector3>; side: 1 | -1 }) {
+  const placement = useMemo(() => trackPlacement(curve, .54, 0), [curve])
   return <group position={placement.position} rotation-y={placement.rotation}>
     <mesh receiveShadow position={[0, .06, 0]}><boxGeometry args={[2.6, .12, 19]} /><meshStandardMaterial color="#56636d" /></mesh>
-    <mesh castShadow position={[4.4, 1.75, 0]}><boxGeometry args={[4.8, 3.5, 19]} /><meshStandardMaterial color="#e7e0c9" roughness={.75} /></mesh>
-    {[-7,-3.5,0,3.5,7].map((z) => <mesh key={z} position={[1.95, 1.05, z]}><boxGeometry args={[.12, 1.8, 2.7]} /><meshStandardMaterial color="#102e4d" /></mesh>)}
-    <mesh castShadow position={[0, 4.1, 0]}><boxGeometry args={[11, .35, .8]} /><meshStandardMaterial color="#54e6ef" /></mesh>
-    <mesh castShadow position={[-4.6, 1.4, 0]}><boxGeometry args={[5.8, 2.8, 11]} /><meshStandardMaterial color="#d4dae0" /></mesh>
+    <mesh castShadow position={[-side * 4.2, 1.4, 0]}><boxGeometry args={[4.4, 2.8, 19]} /><meshStandardMaterial color="#e7e0c9" roughness={.75} /></mesh>
+    {[-7,-3.5,0,3.5,7].map((z) => <mesh key={z} position={[-side * 1.95, .9, z]}><boxGeometry args={[.12, 1.55, 2.7]} /><meshStandardMaterial color="#102e4d" /></mesh>)}
+    <mesh castShadow position={[0, 3.6, 0]}><boxGeometry args={[10.2, .3, .72]} /><meshStandardMaterial color="#54e6ef" /></mesh>
+    <mesh castShadow position={[-side * 7.5, 1.2, 0]}><boxGeometry args={[2.4, 2.4, 10]} /><meshStandardMaterial color="#d4dae0" /></mesh>
+  </group>
+}
+
+function TracksideGrandstand({ curve }: { curve: THREE.CatmullRomCurve3 }) {
+  const placement = useMemo(() => {
+    const samples = curve.getSpacedPoints(120)
+    const centroid = samples.reduce((sum, point) => sum.add(point), new THREE.Vector3()).multiplyScalar(1 / samples.length)
+    const t = .2
+    const point = curve.getPointAt(t)
+    const tangent = curve.getTangentAt(t).normalize()
+    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x)
+    const outside = normal.dot(point.clone().sub(centroid)) >= 0 ? 1 : -1
+    return trackPlacement(curve, t, outside * 15)
+  }, [curve])
+  const spectatorColors = ['#ff633f', '#54e6ef', '#ffd65a', '#a88cff', '#e8f4f2']
+  return <group position={placement.position} rotation-y={placement.rotation}>
+    {[-7,-2.3,2.3,7].map((z) => <mesh key={'support-' + z} position={[1.8, -2.1, z]}><boxGeometry args={[.45, 4.4, .45]} /><meshStandardMaterial color="#536b78" /></mesh>)}
+    {[0,1,2].map((row) => <mesh key={row} castShadow position={[row * 1.25, .55 + row * .72, 0]}><boxGeometry args={[2.1, .7, 18]} /><meshStandardMaterial color={row % 2 ? '#c4ced0' : '#e4dfcf'} roughness={.85} /></mesh>)}
+    <mesh castShadow position={[3.1, 4.2, 0]}><boxGeometry args={[5.7, .3, 19.5]} /><meshStandardMaterial color="#173651" /></mesh>
+    {Array.from({ length: 18 }, (_, index) => <mesh key={index} position={[.25 + (index % 3) * 1.25, 1.2 + (index % 3) * .72, -7.5 + Math.floor(index / 3) * 3]}><sphereGeometry args={[.16, 6, 4]} /><meshStandardMaterial color={spectatorColors[index % spectatorColors.length]} /></mesh>)}
+    <mesh position={[-2.2, 1.2, 0]}><boxGeometry args={[.18, 2.4, 20]} /><meshStandardMaterial color="#617783" /></mesh>
   </group>
 }
 
 function CircuitBackdrop({ circuit, rain }: { circuit: RaceConfig['circuit']; rain: number }) {
-  const city = circuit === 'catalunya'
+  const cityPalette = circuit === 'catalunya' ? ['#d9d1b8', '#b9c8ce'] : circuit === 'british' ? ['#b8c7c9', '#d6d2c3'] : ['#9daaa5', '#c8c1ac']
   return <>
-    <group position={[0, 0, -62]}>
-      {[-48,-31,-14,5,24,43].map((x, index) => <mesh key={x} position={[x, 7 + index % 2 * 3, index % 2 * -3]} rotation-y={index * .45}><coneGeometry args={[12 + index % 3 * 3, 18 + index % 2 * 6, 6]} /><meshStandardMaterial color={rain > .3 ? '#536d70' : circuit === 'ardennes' ? '#47785c' : '#71836c'} roughness={1} /></mesh>)}
+    <group position={[0, -2.5, -108]}>
+      {[-58,-38,-17,6,29,52].map((x, index) => <mesh key={x} position={[x, 6 + index % 2 * 3, index % 2 * -5]} rotation-y={index * .45}><coneGeometry args={[15 + index % 3 * 4, 17 + index % 2 * 7, 7]} /><meshStandardMaterial color={rain > .3 ? '#536d70' : circuit === 'ardennes' ? '#47785c' : circuit === 'british' ? '#6c8069' : '#7d866c'} roughness={1} /></mesh>)}
     </group>
-    {city && <group position={[52, 0, 25]}>{[0,1,2,3,4,5,6].map((index) => <mesh key={index} position={[(index % 3) * 6, 3 + index % 3 * 1.5, Math.floor(index / 3) * 7]}><boxGeometry args={[4.5, 6 + index % 3 * 3, 4.5]} /><meshStandardMaterial color={index % 2 ? '#d9d1b8' : '#b9c8ce'} /></mesh>)}</group>}
+    <group position={circuit === 'catalunya' ? [54, 0, 28] : circuit === 'british' ? [-62, 0, 34] : [58, 0, -12]}>{Array.from({ length: circuit === 'catalunya' ? 10 : 6 }, (_, index) => <mesh key={index} position={[(index % 4) * 5.5, 2.5 + index % 3 * 1.4, Math.floor(index / 4) * 6]}><boxGeometry args={[4.2, 5 + index % 3 * 2.8, 4.2]} /><meshStandardMaterial color={cityPalette[index % 2]} roughness={.8} /></mesh>)}</group>
+    <group position={[-86, 0, -82]}>{[0,1,2,3,4].map((index) => <mesh key={index} position={[index * 7, 1.2 + index % 2, index % 2 * 5]}><dodecahedronGeometry args={[3.2 + index % 2 * .6, 0]} /><meshStandardMaterial color={rain > .3 ? '#516d58' : '#3f7d4d'} roughness={1} /></mesh>)}</group>
     <mesh position={[-42, 28, -58]}><sphereGeometry args={[5.5, 16, 12]} /><meshBasicMaterial color={rain > .35 ? '#b6c3ca' : '#fff0a8'} transparent opacity={rain > .35 ? .25 : .95} /></mesh>
   </>
 }
@@ -383,7 +444,7 @@ function MovingClouds({ rain, windKph }: { rain: number; windKph: number }) {
   return <group ref={group} position={[0, 22, -32]}>{[-44,-17,12,39].map((x, index) => <group key={x} position={[x, index % 2 * 3, index % 2 * 17]}>{[-2,0,2].map((offset) => <mesh key={offset} position={[offset * 1.7, Math.abs(offset) * -.4, 0]}><dodecahedronGeometry args={[2.8 + (offset === 0 ? 1.2 : 0), 0]} /><meshStandardMaterial color={color} transparent opacity={.82} roughness={1} /></mesh>)}</group>)}</group>
 }
 
-function trackPlacement(curve: THREE.CatmullRomCurve3, t: number, side: number) {
+function trackPlacement(curve: THREE.Curve<THREE.Vector3>, t: number, side: number) {
   const point = curve.getPointAt(t)
   const tangent = curve.getTangentAt(t).normalize()
   const normal = new THREE.Vector3(-tangent.z, 0, tangent.x)
@@ -447,7 +508,7 @@ function Rain({ intensity, windKph }: { intensity: number; windKph: number }) {
   )
 }
 
-function createStripGeometry(curve: THREE.CatmullRomCurve3, inner: number, outer: number, segments: number) {
+function createStripGeometry(curve: THREE.Curve<THREE.Vector3>, inner: number, outer: number, segments: number) {
   const vertices: number[] = []
   const indices: number[] = []
   for (let i = 0; i <= segments; i += 1) {
@@ -470,6 +531,56 @@ function createStripGeometry(curve: THREE.CatmullRomCurve3, inner: number, outer
   return geometry
 }
 
+function createRacingLineGeometry(curve: THREE.Curve<THREE.Vector3>, circuit: RaceConfig['circuit'], segments: number) {
+  const vertices: number[] = []
+  const indices: number[] = []
+  for (let index = 0; index <= segments; index += 1) {
+    const t = index / segments
+    const point = curve.getPointAt(t)
+    const tangent = curve.getTangentAt(t).normalize()
+    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x)
+    const target = point.clone().addScaledVector(normal, racingLineOffsetAt(circuit, t) * 2.35)
+    const left = target.clone().addScaledVector(normal, -0.055)
+    const right = target.clone().addScaledVector(normal, 0.055)
+    vertices.push(left.x, left.y, left.z, right.x, right.y, right.z)
+    if (index < segments) {
+      const base = index * 2
+      indices.push(base, base + 2, base + 1, base + 1, base + 2, base + 3)
+    }
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+  geometry.setIndex(indices)
+  geometry.computeVertexNormals()
+  return geometry
+}
+
+function createTaperedStripGeometry(curve: THREE.Curve<THREE.Vector3>, halfWidth: number, segments: number) {
+  const vertices: number[] = []
+  const indices: number[] = []
+  for (let i = 0; i <= segments; i += 1) {
+    const t = i / segments
+    const p = curve.getPointAt(t)
+    const tangent = curve.getTangentAt(t).normalize()
+    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x)
+    const taper = Math.sin(Math.PI * t) ** .55
+    const width = .08 + halfWidth * taper
+    const a = p.clone().addScaledVector(normal, -width)
+    const b = p.clone().addScaledVector(normal, width)
+    vertices.push(a.x, a.y, a.z, b.x, b.y, b.z)
+    if (i < segments) {
+      const base = i * 2
+      indices.push(base, base + 2, base + 1, base + 1, base + 2, base + 3)
+    }
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+  geometry.setIndex(indices)
+  geometry.computeVertexNormals()
+  return geometry
+}
+
+
 function createTerrainGeometry(curve: THREE.CatmullRomCurve3) {
   const size = 230
   const segments = 58
@@ -480,15 +591,7 @@ function createTerrainGeometry(curve: THREE.CatmullRomCurve3) {
     for (let xIndex = 0; xIndex <= segments; xIndex += 1) {
       const x = (xIndex / segments - .5) * size
       const z = (zIndex / segments - .5) * size
-      let nearestDistance = Number.POSITIVE_INFINITY
-      let trackHeight = 0
-      samples.forEach((sample) => {
-        const distance = (sample.x - x) ** 2 + (sample.z - z) ** 2
-        if (distance < nearestDistance) { nearestDistance = distance; trackHeight = sample.y }
-      })
-      const support = Math.exp(-nearestDistance / 250)
-      const distantRoll = (Math.sin(x * .045) + Math.cos(z * .052)) * .45 * (1 - support)
-      vertices.push(x, trackHeight * support - .2 + distantRoll, z)
+      vertices.push(x, terrainHeightAt(x, z, samples), z)
       if (xIndex < segments && zIndex < segments) {
         const row = segments + 1
         const base = zIndex * row + xIndex
@@ -503,22 +606,49 @@ function createTerrainGeometry(curve: THREE.CatmullRomCurve3) {
   return geometry
 }
 
+function terrainHeightAt(x: number, z: number, samples: THREE.Vector3[]) {
+  let nearestDistance = Number.POSITIVE_INFINITY
+  let trackHeight = 0
+  samples.forEach((sample) => {
+    const distance = (sample.x - x) ** 2 + (sample.z - z) ** 2
+    if (distance < nearestDistance) { nearestDistance = distance; trackHeight = sample.y }
+  })
+  const support = Math.exp(-nearestDistance / 250)
+  const distantRoll = (Math.sin(x * .045) + Math.cos(z * .052)) * .45 * (1 - support)
+  return trackHeight * support - .2 + distantRoll
+}
+
+function nearestHorizontalDistance(point: THREE.Vector3, samples: THREE.Vector3[]) {
+  let nearest = Number.POSITIVE_INFINITY
+  samples.forEach((sample) => {
+    nearest = Math.min(nearest, Math.hypot(point.x - sample.x, point.z - sample.z))
+  })
+  return nearest
+}
+
 function placeOnTrack(
   object: THREE.Group,
-  curve: THREE.CatmullRomCurve3,
+  curve: THREE.Curve<THREE.Vector3>,
   progress: number,
   lane: number,
   point: THREE.Vector3,
   tangent: THREE.Vector3,
   normal: THREE.Vector3,
+  wrap = true,
+  surfaceOffset = 0.22,
 ) {
-  const t = THREE.MathUtils.euclideanModulo(progress, 1)
+  const t = wrap ? THREE.MathUtils.euclideanModulo(progress, 1) : THREE.MathUtils.clamp(progress, 0, 1)
   curve.getPointAt(t, point)
   curve.getTangentAt(t, tangent).normalize()
   normal.set(-tangent.z, 0, tangent.x)
   object.position.copy(point).addScaledVector(normal, lane * 2.35)
-  object.position.y += 0.12
-  object.rotation.y = Math.atan2(tangent.x, tangent.z)
+  const worldUp = new THREE.Vector3(0, 1, 0)
+  const right = new THREE.Vector3().crossVectors(worldUp, tangent).normalize()
+  const surfaceUp = new THREE.Vector3().crossVectors(tangent, right).normalize()
+  const basis = new THREE.Matrix4().makeBasis(right, surfaceUp, tangent)
+  object.quaternion.setFromRotationMatrix(basis)
+  // The lowest rear-tyre point is 0.0156 above the model origin.
+  object.position.addScaledVector(worldUp, surfaceOffset).addScaledVector(surfaceUp, -0.0156)
 }
 
 function cloneSnapshot(state: RaceSnapshot): RaceSnapshot {
@@ -526,6 +656,7 @@ function cloneSnapshot(state: RaceSnapshot): RaceSnapshot {
     ...state,
     racers: state.racers.map((racer) => ({ ...racer })),
     eventLog: [...state.eventLog],
+    decisionHistory: state.decisionHistory.map((record) => ({ ...record })),
   }
 }
 

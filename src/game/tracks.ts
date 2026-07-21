@@ -24,7 +24,7 @@ export const trackProfiles: Record<CircuitId, TrackProfile> = {
     pace: 0.09,
     weather: { airTemp: 21, trackTemp: 29, humidity: 72, windKph: 14, windDirection: 'SW' },
     points: [
-      [-47, 0.0, -23], [-43, 0.0, -14], [-38, 0.1, -9], [-32, 0.3, -5],
+      [-46, 0.0, -13], [-43, 0.0, -10], [-38, 0.1, -7], [-32, 0.3, -5],
       [-28, 0.7, -1], [-26, 1.8, 4], [-23, 3.0, 8], [-20, 4.4, 9],
       [-15, 5.4, 11], [-9, 6.0, 16], [-2, 6.2, 20], [7, 6.0, 23],
       [20, 5.6, 27], [25, 5.3, 29], [28, 5.1, 27], [31, 5.0, 26],
@@ -37,7 +37,7 @@ export const trackProfiles: Record<CircuitId, TrackProfile> = {
       [30, 0.0, -29], [25, 0.0, -26], [20, 0.0, -21], [16, 0.0, -15],
       [12, 0.0, -9], [7, 0.0, -6], [1, 0.0, -5], [-5, 0.0, -5],
       [-11, 0.0, -8], [-18, 0.0, -10], [-24, 0.0, -9], [-27, 0.0, -12],
-      [-31, 0.0, -15], [-38, 0.0, -18], [-44, 0.0, -22],
+      [-31, 0.0, -15], [-38, 0.0, -18], [-45, 0.0, -19], [-50, 0.0, -17], [-50, 0.0, -14],
     ],
   },
   british: {
@@ -73,7 +73,7 @@ export const trackProfiles: Record<CircuitId, TrackProfile> = {
     pace: 0.092,
     weather: { airTemp: 27, trackTemp: 39, humidity: 48, windKph: 11, windDirection: 'SE' },
     points: [
-      [-29, 0, -20], [-16, 0, -20], [4, 0, -20], [23, 0, -20],
+      [-28, 0, -22], [-16, 0, -22], [4, 0, -22], [23, 0, -22],
       [37, 0, -20], [45, 0, -17], [48, 0, -11], [48, 0, -3],
       [45, 0, 6], [40, 0, 13], [34, 0, 18], [28, 0, 19],
       [25, 0, 16], [27, 0, 12], [34, 0, 10], [38, 0, 5],
@@ -81,8 +81,8 @@ export const trackProfiles: Record<CircuitId, TrackProfile> = {
       [1, 0, 18], [-5, 0, 19], [-10, 0, 15], [-15, 0, 8],
       [-20, 0, 1], [-27, 0, 0], [-34, 0, 4], [-41, 0, 9],
       [-47, 0, 8], [-49, 0, 2], [-47, 0, -4], [-41, 0, -8],
-      [-34, 0, -7], [-25, 0, -7], [-20, 0, -9], [-18, 0, -13],
-      [-20, 0, -17], [-27, 0, -19],
+      [-34, 0, -7], [-28, 0, -7], [-24, 0, -9], [-27, 0, -13],
+      [-34, 0, -16], [-37, 0, -18],
     ],
   },
 }
@@ -92,4 +92,89 @@ export function createTrackCurve(circuit: CircuitId): THREE.CatmullRomCurve3 {
     ([x, y, z]) => new THREE.Vector3(x * 1.35, y, z * 1.35),
   )
   return new THREE.CatmullRomCurve3(points, true, 'centripetal', 0.5)
+}
+
+const curveCache = new Map<CircuitId, THREE.CatmullRomCurve3>()
+// Tangents are sampled 1.8% of a lap apart. Across the three enlarged circuits,
+// about 1.35 radians represents the 95th-percentile genuinely tight corner.
+// The former 0.18 divisor saturated most of every lap at severity 1.
+const CURVATURE_REFERENCE_RADIANS = 1.35
+
+export function cornerSeverityAt(circuit: CircuitId, progress: number): number {
+  let curve = curveCache.get(circuit)
+  if (!curve) {
+    curve = createTrackCurve(circuit)
+    curveCache.set(circuit, curve)
+  }
+  const t = THREE.MathUtils.euclideanModulo(progress, 1)
+  const before = curve.getTangentAt(THREE.MathUtils.euclideanModulo(t - 0.009, 1)).normalize()
+  const after = curve.getTangentAt(THREE.MathUtils.euclideanModulo(t + 0.009, 1)).normalize()
+  const angle = Math.acos(THREE.MathUtils.clamp(before.dot(after), -1, 1))
+  return THREE.MathUtils.clamp(angle / CURVATURE_REFERENCE_RADIANS, 0, 1)
+}
+
+function signedCornerAt(curve: THREE.CatmullRomCurve3, progress: number): number {
+  const t = THREE.MathUtils.euclideanModulo(progress, 1)
+  const before = curve.getTangentAt(THREE.MathUtils.euclideanModulo(t - 0.009, 1)).normalize()
+  const after = curve.getTangentAt(THREE.MathUtils.euclideanModulo(t + 0.009, 1)).normalize()
+  const angle = Math.acos(THREE.MathUtils.clamp(before.dot(after), -1, 1))
+  const direction = Math.sign(before.x * after.z - before.z * after.x) || 1
+  return direction * THREE.MathUtils.clamp(angle / CURVATURE_REFERENCE_RADIANS, 0, 1)
+}
+
+function rawRacingLineOffsetAt(curve: THREE.CatmullRomCurve3, progress: number): number {
+  const current = signedCornerAt(curve, progress)
+  const future = signedCornerAt(curve, progress + 0.026)
+  const past = signedCornerAt(curve, progress - 0.026)
+  const strength = (value: number) => THREE.MathUtils.clamp((Math.abs(value) - 0.1) / 0.9, 0, 1) ** 0.82
+  const currentStrength = strength(current)
+  const approach = Math.max(0, strength(future) - currentStrength)
+  const exit = Math.max(0, strength(past) - currentStrength)
+  const inside = Math.sign(current) * currentStrength * 0.94
+  const approachOutside = -Math.sign(future) * approach * 0.78
+  const exitOutside = -Math.sign(past) * exit * 0.68
+  return THREE.MathUtils.clamp(inside + approachOutside + exitOutside, -0.84, 0.84)
+}
+
+/** Smoothed outside–inside–outside lane target in normalized lane units. */
+export function racingLineOffsetAt(circuit: CircuitId, progress: number): number {
+  let curve = curveCache.get(circuit)
+  if (!curve) {
+    curve = createTrackCurve(circuit)
+    curveCache.set(circuit, curve)
+  }
+  const offsets = [-0.04, -0.03, -0.02, -0.01, 0, 0.01, 0.02, 0.03, 0.04]
+  const weights = [1, 2, 4, 7, 9, 7, 4, 2, 1]
+  const weighted = offsets.reduce(
+    (total, offset, index) => total + rawRacingLineOffsetAt(curve, progress + offset) * weights[index],
+    0,
+  )
+  return THREE.MathUtils.clamp(weighted / 37, -0.84, 0.84)
+}
+
+export interface PitLaneLayout {
+  curve: THREE.CatmullRomCurve3
+  side: 1 | -1
+}
+
+/** Builds a bounded branch beside start/finish and chooses the circuit exterior. */
+export function createPitLaneLayout(mainCurve: THREE.CatmullRomCurve3): PitLaneLayout {
+  const trackSamples = mainCurve.getSpacedPoints(160)
+  const centroid = trackSamples.reduce((sum, point) => sum.add(point), new THREE.Vector3()).multiplyScalar(1 / trackSamples.length)
+  const start = mainCurve.getPointAt(0)
+  const startTangent = mainCurve.getTangentAt(0).normalize()
+  const startNormal = new THREE.Vector3(-startTangent.z, 0, startTangent.x)
+  const side: 1 | -1 = startNormal.dot(start.clone().sub(centroid)) >= 0 ? 1 : -1
+  const serviceOffset = 7.2
+  const samples = Array.from({ length: 65 }, (_, index) => {
+    const phase = index / 64
+    const trackT = THREE.MathUtils.euclideanModulo(0.9 + phase * 0.2, 1)
+    const point = mainCurve.getPointAt(trackT)
+    const tangent = mainCurve.getTangentAt(trackT).normalize()
+    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).multiplyScalar(side)
+    const blend = Math.sin(Math.PI * phase) ** 0.85
+    return point.clone().addScaledVector(normal, serviceOffset * blend).setY(point.y)
+  })
+  const curve = new THREE.CatmullRomCurve3(samples, false, 'centripetal', 0.42)
+  return { curve, side }
 }

@@ -14,13 +14,13 @@ export function IntroScreen({ initialName, onEnter, onTutorial }: { initialName:
         <Suspense fallback={<span>Loading autonomous strategy model…</span>}><IntroScene /></Suspense>
         <div className="intro-visual-labels"><b className="ml">ML · FORECAST</b><b className="dl">DL · DETECT</b><b className="rl">RL · ADAPT</b></div>
       </div>
-      <div className="intro-orb" aria-hidden="true">
-        <Suspense fallback={null}><IntroOrbScene /></Suspense>
-      </div>
       <section className="intro-hero">
         <p className="eyebrow">Three AI systems. One human call.</p>
         <h1>BUILD THE PLAN.<br /><i>READ THE AI.</i><br />CALL THE RACE.</h1>
-        <p className="intro-copy">Lead an autonomous race team through changing weather. Each AI sees a different part of the problem. Compare their evidence, make the pit-wall call, and learn why the outcome changed.</p>
+        <div className="intro-story">
+          <p className="intro-copy">Lead an autonomous race team through changing weather. Each AI sees a different part of the problem. Compare their evidence, make the pit-wall call, and learn why the outcome changed.</p>
+          <div className="intro-orb" aria-hidden="true"><Suspense fallback={null}><IntroOrbScene /></Suspense></div>
+        </div>
         <div className="intro-ai-grid">
           <article className="ml"><b>ML</b><div><strong>Predictor</strong><p>Uses past race examples and your setup to forecast lap time, rain timing, fuel margin, and tyre risk.</p><small>OUTPUT · WHAT MAY HAPPEN + CONFIDENCE</small></div></article>
           <article className="dl"><b>DL</b><div><strong>Pattern Scanner</strong><p>Reads live track and telemetry patterns to detect tyre heat, grip loss, rain, and unusual behaviour.</p><small>OUTPUT · WHAT IS HAPPENING NOW</small></div></article>

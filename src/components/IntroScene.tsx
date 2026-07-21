@@ -1,12 +1,12 @@
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { RefObject } from 'react'
 import * as THREE from 'three'
 
 export function IntroScene() {
   return (
     <Canvas
-      camera={{ position: [0, 5.5, 8.5], fov: 40 }}
+      camera={{ position: [0, 6.1, 10.4], fov: 42 }}
       dpr={[1, 1.5]}
       gl={{ antialias: true, alpha: true }}
     >
@@ -19,7 +19,7 @@ export function IntroScene() {
 
 export function IntroOrbScene() {
   return (
-    <Canvas camera={{ position: [0, 0.4, 7], fov: 38 }} dpr={[1, 1.5]} gl={{ antialias: true, alpha: true }}>
+    <Canvas camera={{ position: [0, 0.4, 7.8], fov: 38 }} dpr={[1, 1.5]} gl={{ antialias: true, alpha: true }}>
       <ambientLight intensity={1.1} />
       <directionalLight position={[3, 5, 5]} intensity={2.2} />
       <pointLight position={[0.8, 1.2, 3]} color="#54e6ef" intensity={16} distance={7} />
@@ -49,7 +49,7 @@ function FloatingRace() {
   const road = useMemo(() => createRoadRibbon(curve, 1.35, 90), [curve])
 
   return (
-    <group rotation={[0, -0.16, 0]}>
+    <group position={[-0.45, -0.18, 0]} rotation={[0, -0.16, 0]} scale={0.88}>
       <mesh geometry={road}>
         <meshStandardMaterial color="#1c3547" roughness={0.72} metalness={0.18} side={THREE.DoubleSide} />
       </mesh>
@@ -78,10 +78,38 @@ function StrategySphere() {
         <torusGeometry args={[2.45, 0.025, 6, 90]} />
         <meshBasicMaterial color="#54e6ef" transparent opacity={0.6} />
       </mesh>
+      <OrbitingMiniCar color="#ff633f" tilt={[0.35, 0.1, -0.18]} speed={-0.34} phase={0} radius={2.45} />
       <mesh rotation={[-0.45, 0.25, 0.5]}>
         <torusGeometry args={[2.32, 0.018, 6, 90]} />
         <meshBasicMaterial color="#a88cff" transparent opacity={0.35} />
       </mesh>
+      <OrbitingMiniCar color="#54e6ef" tilt={[-0.45, 0.25, 0.5]} speed={0.24} phase={Math.PI} radius={2.32} />
+    </group>
+  )
+}
+
+function OrbitingMiniCar({ color, tilt, speed, phase, radius }: { color: string; tilt: [number, number, number]; speed: number; phase: number; radius: number }) {
+  const orbit = useRef<THREE.Group>(null)
+  useEffect(() => { if (orbit.current) orbit.current.rotation.z = phase }, [phase])
+  useFrame((_, delta) => {
+    if (orbit.current) orbit.current.rotation.z += delta * speed
+  })
+  return (
+    <group rotation={tilt}>
+      <group ref={orbit}>
+        <group position={[radius, 0, 0.08]} rotation={[-Math.PI / 2, 0, 0]} scale={0.16}>
+          <mesh><boxGeometry args={[1.2, 0.3, 2.8]} /><meshStandardMaterial color={color} metalness={0.35} roughness={0.3} /></mesh>
+          <mesh position={[0, 0.32, 0.15]}><sphereGeometry args={[0.42, 8, 6]} /><meshStandardMaterial color="#071d31" /></mesh>
+          <mesh position={[0, 0.1, 1.62]}><boxGeometry args={[2.15, 0.13, 0.38]} /><meshStandardMaterial color="#e8f4f2" /></mesh>
+          <mesh position={[0, 0.38, -1.42]}><boxGeometry args={[1.85, 0.13, 0.38]} /><meshStandardMaterial color="#e8f4f2" /></mesh>
+          {[[-0.82, 0, 0.85], [0.82, 0, 0.85], [-0.82, 0, -0.85], [0.82, 0, -0.85]].map(([x, y, z], index) => (
+            <mesh key={index} position={[x, y, z]} rotation-z={Math.PI / 2}>
+              <cylinderGeometry args={[0.34, 0.34, 0.28, 8]} />
+              <meshStandardMaterial color="#05090d" />
+            </mesh>
+          ))}
+        </group>
+      </group>
     </group>
   )
 }

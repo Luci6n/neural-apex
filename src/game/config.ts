@@ -12,7 +12,9 @@ export const defaultConfig: RaceConfig = {
   pitPolicy: 'forecast',
   scannerFocus: 'balanced',
   priority: 'finish',
+  driverStyle: 'balanced',
   botPreset: 'balanced',
+  weatherSeed: 217,
 }
 
 const botFields: Record<BotPreset, Omit<RacerState, 'progress' | 'speed' | 'inPit' | 'finished' | 'bestLapSeconds' | 'lastLapStarted' | 'pitTimeRemaining' | 'collisionCooldown' | 'damage' | 'retired'>[]> = {
@@ -51,6 +53,9 @@ export function createBotGrid(preset: BotPreset): RacerState[] {
     bestLapSeconds: null,
     lastLapStarted: 0,
     pitTimeRemaining: 0,
+    pitStopDuration: 0,
+    pitLanePhase: 0,
+    pitExitProgress: 0,
     collisionCooldown: 0,
     damage: 'none',
     retired: false,

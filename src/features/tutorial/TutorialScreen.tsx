@@ -4,7 +4,7 @@ const steps = [
   ['01', 'Configure', 'Set circuit, laps, tyre, fuel, aero, and AI priorities.', 'setup'],
   ['02', 'Launch', 'Cars drive themselves. You watch from the pit wall.', 'launch'],
   ['03', 'Interpret', 'Compare forecast, live detection, and adaptation.', 'signals'],
-  ['04', 'Decide', 'Change pace or choose the right rain tyre.', 'decision'],
+  ['04', 'Decide', 'Change pace, follow or reject the evidence, or call Box this lap.', 'decision'],
   ['05', 'Compare', 'Change one variable and measure the next run.', 'compare'],
 ] as const
 
@@ -38,6 +38,19 @@ export function TutorialScreen({ onBack, onStart }: { onBack: () => void; onStar
           <li><b>Status</b><span>IN PIT, OUT LAP, live interval, fastest lap, or FINISHED.</span></li>
         </ul>
       </section>
+      <section className="tutorial-race-rehearsal">
+        <div className="tutorial-section-heading"><span>LIVE RACE REHEARSAL</span><h2>See the pit wall before launch.</h2><p>The cars move on their own. Read the timing tower, changing grip, and three AI signals while you make only high-level calls.</p></div>
+        <RaceRehearsal />
+      </section>
+      <section className="tutorial-operations">
+        <div className="tutorial-section-heading"><span>MAKE THE CALL</span><h2>Four controls. Real consequences.</h2><p>Use these during a run; steering, throttle, and braking remain autonomous.</p></div>
+        <div className="operation-grid">
+          <article><DriverStyleVisual /><h3>Driver style</h3><p>Cautious brakes earlier. Aggressive carries more corner speed but raises wear, fuel use, track-limit, and contact risk.</p></article>
+          <article><AdviceVisual /><h3>Read agreement</h3><p>The systems may agree or conflict. Compare forecast, live evidence, and the adaptive objective before deciding.</p></article>
+          <article><PitCycleVisual /><h3>Box this lap</h3><p>Pick a compound now. The car enters the pit lane, obeys the 80 km/h limiter, stops, changes tyres, then exits.</p></article>
+          <article><StewardVisual /><h3>Finish cleanly</h3><p>Three track-limit strikes or pit speeding add five seconds. Contact can cause damage or a DNF.</p></article>
+        </div>
+      </section>
       <section className="tutorial-tyres">
         <div><span>TYRE QUICK GUIDE</span><h2>Fast is not always right.</h2></div>
         <div className="tyre-guide"><p><i className="hard" />C1–C2 <b>Hard</b><small>Durable, slower warm-up</small></p><p><i className="medium" />C3 <b>Medium</b><small>Balanced baseline</small></p><p><i className="soft" />C4–C5 <b>Soft</b><small>Faster, wears sooner</small></p><p><i className="inter" />I <b>Intermediate</b><small>Light rain / damp track</small></p><p><i className="wet" />W <b>Full Wet</b><small>Heavy rain / high drainage</small></p></div>
@@ -45,6 +58,57 @@ export function TutorialScreen({ onBack, onStart }: { onBack: () => void; onStar
       <section className="tutorial-callout"><div><span>THE RULE</span><h2>You never drive the car.</h2><p>Your job is to prepare the system, interpret imperfect evidence, and make the final strategic decision.</p></div><button className="start-race" onClick={onStart}><span>Open strategy setup</span><b>↗</b></button></section>
     </main>
   )
+}
+
+function RaceRehearsal() {
+  const path = 'M 72 170 C 35 132 48 62 120 48 C 178 36 205 79 258 59 C 324 34 401 67 392 123 C 383 177 315 190 268 162 C 219 132 188 181 132 178 C 108 177 89 175 72 170 Z'
+  return (
+    <div className="race-rehearsal" aria-label="Animated example of the live autonomous race screen">
+      <div className="rehearsal-tower">
+        <header><b>RACE</b><span>LAP 2 / 5</span></header>
+        <p><b>1</b><i className="orange" /><strong>NAX</strong><span>INTERVAL</span><em>C3</em></p>
+        <p><b>2</b><i className="cyan" /><strong>CC</strong><span>+0.8</span><em>C2</em></p>
+        <p><b>3</b><i className="violet" /><strong>VV</strong><span>PIT</span><em>I</em></p>
+      </div>
+      <div className="rehearsal-track">
+        <svg viewBox="0 0 440 220" aria-hidden="true">
+          <path className="rehearsal-grass" d="M0 0H440V220H0Z" />
+          <path className="rehearsal-road-edge" d={path} />
+          <path className="rehearsal-road" d={path} />
+          <path className="rehearsal-line" d={path} />
+          {['#ff633f', '#54e6ef', '#a88cff'].map((color, index) => (
+            <circle key={color} r={index === 0 ? 5 : 4} fill={color}>
+              <animateMotion dur={(4.8 + index * 0.65) + 's'} begin={(-index * 1.25) + 's'} repeatCount="indefinite" path={path} />
+            </circle>
+          ))}
+        </svg>
+        <div className="rehearsal-weather"><span>AIR <b>21°C</b></span><span>TRACK <b>29°C</b></span><span>RAIN <b>34%</b></span></div>
+        <div className="rehearsal-command"><b>PIT WALL</b><span>PUSH</span><span className="active">HOLD PLAN</span><span>CONSERVE</span><span className="box">BOX THIS LAP</span></div>
+      </div>
+      <aside className="rehearsal-ai">
+        <p className="ml"><b>ML</b><span>RAIN IN 1.4 LAPS</span><em>MED</em></p>
+        <p className="dl"><b>DL</b><span>REAR HEAT RISING</span><em>ALERT</em></p>
+        <p className="rl"><b>RL</b><span>PACE ADAPTED</span><em>CHANGED</em></p>
+        <div><span>TYRE WEAR <b>18%</b></span><span>GRIP <b>86%</b></span><span>FUEL <b>71%</b></span></div>
+      </aside>
+    </div>
+  )
+}
+
+function DriverStyleVisual() {
+  return <div className="operation-visual driver"><span>CAUTIOUS<i style={{ width: '48%' }} /></span><span>BALANCED<i style={{ width: '68%' }} /></span><span>AGGRESSIVE<i style={{ width: '91%' }} /></span></div>
+}
+
+function AdviceVisual() {
+  return <div className="operation-visual advice"><span><b>ML</b> BOX</span><span><b>DL</b> STAY</span><span><b>RL</b> BOX</span><em>2 / 3 · CONFLICT</em></div>
+}
+
+function PitCycleVisual() {
+  return <div className="operation-visual pit-cycle"><span>BOX</span><i>→</i><span>80</span><i>→</i><span>STOP</span><i>→</i><span>I</span></div>
+}
+
+function StewardVisual() {
+  return <div className="operation-visual steward"><span>LIMITS <b>3/3</b></span><span>PIT <b>84</b></span><em>+5s</em><strong>DNF RISK</strong></div>
 }
 
 function StepVisual({ kind }: { kind: string }) {

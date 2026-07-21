@@ -9,6 +9,7 @@ import { createRunRecord } from './game/simulation'
 import type { CircuitId, RaceConfig, RaceSnapshot, RunRecord } from './game/types'
 
 type Screen = 'intro' | 'tutorial' | 'setup' | 'race' | 'debrief'
+type TutorialReturn = 'intro' | 'setup'
 
 const routes: Record<Screen, string> = { intro: '/', tutorial: '/tutorial', setup: '/setup', race: '/race', debrief: '/result' }
 
@@ -20,11 +21,12 @@ export function App() {
     const params = new URLSearchParams(window.location.search)
     const circuit = params.get('circuit') || params.get('qa')
     const circuits: CircuitId[] = ['ardennes', 'british', 'catalunya']
-    const base = stored || defaultConfig
+    const base = stored || { ...defaultConfig, weatherSeed: Math.floor(1000 + Math.random() * 9000) }
     return circuits.includes(circuit as CircuitId) ? { ...base, circuit: circuit as CircuitId } : base
   })
   const [finalRace, setFinalRace] = useState<RaceSnapshot | null>(() => readSession('neural-apex-final-race'))
   const [runs, setRuns] = useState<RunRecord[]>(() => readSession('neural-apex-runs') || [])
+  const [tutorialReturn, setTutorialReturn] = useState<TutorialReturn>(() => sessionStorage.getItem('neural-apex-tutorial-return') === 'setup' ? 'setup' : 'intro')
 
   const navigate = useCallback((next: Screen, replace = false) => {
     const keepQaHooks = new URLSearchParams(window.location.search).get('qaHooks') === '1'
@@ -52,9 +54,15 @@ export function App() {
     navigate('setup')
   }
 
-  if (screen === 'intro') return <IntroScreen initialName={principalName} onEnter={enterLab} onTutorial={() => navigate('tutorial')} />
-  if (screen === 'tutorial') return <TutorialScreen onBack={() => navigate('intro')} onStart={() => enterLab()} />
-  if (screen === 'setup') return <SetupScreen config={config} principalName={principalName || 'Team Principal'} lastRun={runs.at(-1)} onChange={setConfig} onStart={() => { setFinalRace(null); sessionStorage.removeItem('neural-apex-final-race'); navigate('race') }} onTutorial={() => navigate('tutorial')} />
+  const openTutorial = (from: TutorialReturn) => {
+    setTutorialReturn(from)
+    sessionStorage.setItem('neural-apex-tutorial-return', from)
+    navigate('tutorial')
+  }
+
+  if (screen === 'intro') return <IntroScreen initialName={principalName} onEnter={enterLab} onTutorial={() => openTutorial('intro')} />
+  if (screen === 'tutorial') return <TutorialScreen onBack={() => navigate(tutorialReturn)} onStart={() => enterLab()} />
+  if (screen === 'setup') return <SetupScreen config={config} principalName={principalName || 'Team Principal'} lastRun={runs.at(-1)} onChange={setConfig} onStart={() => { setFinalRace(null); sessionStorage.removeItem('neural-apex-final-race'); navigate('race') }} onTutorial={() => openTutorial('setup')} onMain={() => navigate('intro')} />
   if (screen === 'race') return <RaceExperience config={config} principalName={principalName || 'Team Principal'} onFinish={(race) => {
     const nextRuns = [...runs, createRunRecord(race, config, runs.length + 1)]
     setFinalRace(race); setRuns(nextRuns)
