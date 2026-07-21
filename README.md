@@ -14,6 +14,10 @@ There are no steering, throttle, braking, or boost controls. Player skill comes 
 
 *Enter as team principal and meet the Predictor, Pattern Scanner, and Adaptive Driver before configuring the experiment.*
 
+![Neural Apex strategy setup with forecast, AI crew, circuit, tyre, aero, and autonomous rival controls](docs/assets/screenshots/strategy-setup.png)
+
+*Configure a reproducible experiment: circuit, session length, compound, fuel, aero, weather policy, driver style, scanner allocation, and rival grid all change the calculated run.*
+
 ![Neural Apex autonomous 3D race with timing, telemetry, AI evidence, and pit-wall controls](docs/assets/screenshots/autonomous-race.png)
 
 *Watch the cars drive themselves while timing, tyre state, grip, incident risk, and all three AI systems update around the circuit.*
