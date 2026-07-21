@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { trackProfiles } from '../game/tracks'
+import { createTrackCurve, trackProfiles } from '../game/tracks'
 import type { CircuitId } from '../game/types'
 
 export function CircuitMap({
@@ -12,7 +12,11 @@ export function CircuitMap({
   compact?: boolean
 }) {
   const map = useMemo(() => {
-    const source = trackProfiles[circuit].points
+    const curve = createTrackCurve(circuit)
+    const source = Array.from({ length: 160 }, (_, index) => {
+      const point = curve.getPointAt(index / 160)
+      return [point.x, point.y, point.z] as [number, number, number]
+    })
     const xs = source.map(([x]) => x)
     const zs = source.map(([, , z]) => z)
     const minX = Math.min(...xs)
@@ -53,4 +57,3 @@ export function CircuitMap({
     </div>
   )
 }
-

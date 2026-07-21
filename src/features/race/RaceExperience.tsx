@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { CircuitMap } from '../../components/CircuitMap'
 import { formatSeconds } from '../../game/simulation'
 import type { RaceConfig, RaceDecision, RaceSnapshot, StrategyCommand } from '../../game/types'
@@ -31,6 +31,12 @@ export function RaceExperience({
   const [explanation, setExplanation] = useState('')
   const [source, setSource] = useState('')
   const [explaining, setExplaining] = useState(false)
+
+  useEffect(() => {
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', warnBeforeLeaving)
+    return () => window.removeEventListener('beforeunload', warnBeforeLeaving)
+  }, [])
 
   const explain = async () => {
     if (!snapshot) return
@@ -135,8 +141,9 @@ function RaceHud({
         <Telemetry label="FUEL" value={snapshot.fuelRemaining} suffix="%" />
         <Telemetry label="GRIP" value={snapshot.grip} suffix="%" />
         <Telemetry label="INCIDENT RISK" value={snapshot.incidentRisk} suffix="%" />
+        <div className="steward-readout"><span>TRACK LIMITS <b>{snapshot.trackLimitStrikes}/3</b></span><span>PIT SPEED <b>{snapshot.pitSpeedKph === null ? '—' : snapshot.pitSpeedKph + ' KM/H'}</b></span><span>PENALTY <b className={snapshot.penaltySeconds > 0 ? 'penalty-active' : ''}>+{snapshot.penaltySeconds}s</b></span></div>
         <div className="weather-readout"><span>AIR <b>{snapshot.airTemp.toFixed(1)}°C</b></span><span>TRACK <b>{snapshot.trackTemp.toFixed(1)}°C</b></span><span>HUM <b>{snapshot.humidity}%</b></span><span>WIND <b>{snapshot.windKph} {snapshot.windDirection}</b></span></div>
-        <div className="setup-readout"><span>SETUP</span><strong style={{ color: tyreProfiles[snapshot.activeTyre].color }}>{tyreProfiles[snapshot.activeTyre].code} · {config.aero.toUpperCase()} AERO · {snapshot.racers[0].damage.toUpperCase()} DAMAGE</strong></div>
+        <div className="setup-readout" data-testid="active-tyre"><span>{snapshot.pitRequested ? 'BOX CALLED' : 'SETUP'}</span><strong style={{ color: tyreProfiles[snapshot.activeTyre].color }}>{tyreProfiles[snapshot.activeTyre].code} ACTIVE{snapshot.pendingTyre ? ' → ' + tyreProfiles[snapshot.pendingTyre].code + ' AT PIT ENTRY' : ''} · {config.aero.toUpperCase()} AERO · {snapshot.racers[0].damage.toUpperCase()} DAMAGE</strong></div>
       </section>
       {latest && <div className="event-ticker"><span>LIVE</span>{latest}</div>}
     </>
@@ -179,8 +186,8 @@ function DecisionModal({
         <p className="engineer-line">“We can trust the forecast now, or wait for visible grip loss. Which signal matters most?”</p>
         {explanation && <div className="ai-explanation"><span>Race engineer · {source === 'openai' ? 'GPT-5.6' : 'Local briefing'}</span><SafeRichText text={explanation} /></div>}
         <div className="decision-actions">
-          <button className="pit-action intermediate-action" onClick={() => onChoose('pit-intermediate')}><span>Pit for intermediates</span><small>Light rain · flexible grip</small></button>
-          <button className="pit-action wet-action" onClick={() => onChoose('pit-wet')}><span>Pit for full wets</span><small>Heavy rain · maximum drainage</small></button>
+          <button className="pit-action intermediate-action" onClick={() => onChoose('pit-intermediate')}><span>Box for intermediates</span><small>Tyre changes at pit entry · flexible grip</small></button>
+          <button className="pit-action wet-action" onClick={() => onChoose('pit-wet')}><span>Box for full wets</span><small>Tyre changes at pit entry · maximum drainage</small></button>
           <button className="stay-action" onClick={() => onChoose('stay-out')}><span>Stay out</span><small>Protect position · risk grip</small></button>
         </div>
         <button className="explain-action" onClick={onExplain} disabled={explaining}>{explaining ? 'Race engineer is thinking…' : 'Explain why they disagree'}</button>

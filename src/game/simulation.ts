@@ -73,7 +73,16 @@ export function createRace(config: RaceConfig): RaceSnapshot {
       'Autonomous control: ' + totalLaps + '-lap plan loaded · racing line ready',
     ],
     pitTimeRemaining: 0,
+    pitRequested: false,
+    pitEntryProgress: null,
+    pendingTyre: null,
     incidentRisk: predictIncidentRisk(config),
+    trackLimitStrikes: 0,
+    trackLimitCooldown: 0,
+    penaltySeconds: 0,
+    penalties: [],
+    pitSpeedKph: null,
+    pitSpeedViolationChecked: false,
   }
 }
 
@@ -107,10 +116,12 @@ export function advanceRace(
 
   player.speed = player.retired ? 0 : playerPace
   if (!player.retired) player.progress += playerPace * dt
+  enterScheduledPit(state)
   const lineAmplitude = config.aero === 'grip' ? 0.12 : config.aero === 'speed' ? 0.24 : 0.18
   player.lane = Math.sin(player.progress * Math.PI * 6) * lineAmplitude
   state.elapsed += dt
   state.currentLapSeconds += dt
+  state.trackLimitCooldown = Math.max(0, state.trackLimitCooldown - dt)
   tickPitState(player, dt)
   player.collisionCooldown = Math.max(0, player.collisionCooldown - dt)
   state.pitTimeRemaining = player.pitTimeRemaining
@@ -144,6 +155,7 @@ export function advanceRace(
   })
 
   manageTrafficAndIncidents(state, config, strategy)
+  applyStewardRules(state, config, strategy)
 
   if (!state.scannerAlert && player.progress >= SCANNER_POINT) {
     state.scannerAlert = true
@@ -195,16 +207,10 @@ export function resolveDecision(state: RaceSnapshot, decision: RaceDecision): Ra
   state.needsDecision = false
   if (decision !== 'stay-out') {
     const fullWet = decision === 'pit-wet'
-    state.racers[0].progress = Math.max(0, state.racers[0].progress - (fullWet ? 0.07 : 0.055))
-    state.playerProgress = state.racers[0].progress
-    state.lapProgress = state.playerProgress % 1
-    state.activeTyre = fullWet ? 'full-wet' : 'intermediate'
-    state.racers[0].tyre = state.activeTyre
-    state.racers[0].inPit = true
-    state.racers[0].pitTimeRemaining = fullWet ? 2.2 : 1.9
-    state.pitTimeRemaining = state.racers[0].pitTimeRemaining
-    state.tyreWear = 0
-    state.eventLog.push('Team decision: pit for ' + tyreProfiles[state.activeTyre].name + ' · time lost now, wet grip prepared')
+    state.pitRequested = true
+    state.pendingTyre = fullWet ? 'full-wet' : 'intermediate'
+    state.pitEntryProgress = Math.floor(state.racers[0].progress) + 0.86
+    state.eventLog.push('Team decision: box for ' + tyreProfiles[state.pendingTyre].name + ' · stop scheduled at pit entry')
   } else {
     state.eventLog.push('Team decision: stay out · track position protected, dry-tyre grip at risk')
   }
@@ -219,19 +225,20 @@ export function createDebrief(state: RaceSnapshot): DebriefData {
     position: state.position,
     score: Math.max(12, 42 - (state.position - 1) * 7) + decisionPoints + 24,
     decision,
-    totalSeconds: state.elapsed,
+    totalSeconds: state.elapsed + state.penaltySeconds,
     predictionOutcome: 'The Predictor expected rain and estimated a ' + formatSeconds(state.predictedLapSeconds) + ' lap from the setup. Rain arrived shortly after the decision window.',
     patternOutcome: 'The Pattern Scanner detected rising rear-tyre heat from live telemetry before the circuit became visibly wet.',
     adaptationOutcome: 'The Adaptive Driver moved its braking point after grip changed, using the earlier outcome to change the next lap.',
-    lesson: pitted
+    lesson: (pitted
       ? 'Your team trusted the forecast early. The pit stop cost track time, but ' + tyreProfiles[state.activeTyre].name + ' protected grip when the prediction became real.'
-      : 'Your team trusted current track evidence. Staying out protected position, but later rain exposed the dry-tyre risk.',
+      : 'Your team trusted current track evidence. Staying out protected position, but later rain exposed the dry-tyre risk.')
+      + (state.penaltySeconds > 0 ? ' Steward penalties added ' + state.penaltySeconds + ' seconds, so clean execution mattered as much as raw pace.' : ''),
   }
 }
 
 export function createRunRecord(state: RaceSnapshot, config: RaceConfig, id: number): RunRecord {
   const debrief = createDebrief(state)
-  return { id, config: { ...config }, position: state.position, totalSeconds: state.elapsed, bestLapSeconds: state.bestLapSeconds, tyreWear: state.tyreWear, fuelRemaining: state.fuelRemaining, decision: debrief.decision, score: debrief.score }
+  return { id, config: { ...config }, position: state.position, totalSeconds: debrief.totalSeconds, bestLapSeconds: state.bestLapSeconds, tyreWear: state.tyreWear, fuelRemaining: state.fuelRemaining, decision: debrief.decision, score: debrief.score }
 }
 
 export function predictLapSeconds(config: RaceConfig): number {
@@ -327,6 +334,22 @@ function tickPitState(racer: RacerState, dt: number): void {
   racer.inPit = racer.pitTimeRemaining > 0
 }
 
+function enterScheduledPit(state: RaceSnapshot): void {
+  const player = state.racers[0]
+  if (!state.pitRequested || state.pitEntryProgress === null || !state.pendingTyre || player.progress < state.pitEntryProgress) return
+  const targetTyre = state.pendingTyre
+  player.inPit = true
+  player.pitTimeRemaining = targetTyre === 'full-wet' ? 2.2 : 1.9
+  player.tyre = targetTyre
+  state.activeTyre = targetTyre
+  state.tyreWear = 0
+  state.pitTimeRemaining = player.pitTimeRemaining
+  state.pitRequested = false
+  state.pitEntryProgress = null
+  state.pendingTyre = null
+  state.eventLog.push('Pit entry: limiter engaged · fitting ' + tyreProfiles[targetTyre].name)
+}
+
 function manageTrafficAndIncidents(state: RaceSnapshot, config: RaceConfig, strategy: StrategyCommand): void {
   for (let first = 0; first < state.racers.length; first += 1) {
     for (let second = first + 1; second < state.racers.length; second += 1) {
@@ -351,15 +374,53 @@ function manageTrafficAndIncidents(state: RaceSnapshot, config: RaceConfig, stra
       if (deterministicRoll(state.elapsed * 1.7, a.id, b.id) > risk) continue
 
       const major = deterministicRoll(state.elapsed * 2.3, b.id, a.id) < 0.18 + state.rain * 0.34
-      trailing.damage = major ? 'major' : 'minor'
-      trailing.retired = major
-      if (major) leading.damage = leading.damage === 'none' ? 'minor' : leading.damage
-      state.eventLog.push(
-        (major ? 'Major accident' : 'Minor contact') + ': ' + trailing.name + ' and ' + leading.name
-        + ' · risk ' + Math.round(risk * 100) + '% · ' + (state.rain > 0.3 ? 'wet grip' : strategy + ' pace'),
-      )
+      applyCollisionOutcome(state, trailing, leading, major ? 'major' : 'minor', 'risk ' + Math.round(risk * 100) + '% · ' + (state.rain > 0.3 ? 'wet grip' : strategy + ' pace'))
     }
   }
+}
+
+function applyStewardRules(state: RaceSnapshot, config: RaceConfig, strategy: StrategyCommand): void {
+  const player = state.racers[0]
+  const lapFraction = positiveModulo(player.progress, 1)
+  const trackLimitWindow = (lapFraction > .34 && lapFraction < .355) || (lapFraction > .78 && lapFraction < .795)
+  const limitRisk = .05 + state.rain * .13 + (strategy === 'push' ? .12 : 0) + (config.aero === 'speed' ? .05 : 0) + (config.priority === 'winning' ? .05 : 0)
+  if (state.trackLimitCooldown <= 0 && (Math.abs(player.lane) > .68 || (trackLimitWindow && deterministicRoll(state.elapsed * .8, 'limits', player.id) < limitRisk))) {
+    recordTrackLimitViolation(state)
+    state.trackLimitCooldown = 1.2
+  }
+
+  if (player.inPit && !state.pitSpeedViolationChecked) {
+    const urgency = strategy === 'push' ? 14 : strategy === 'conserve' ? -5 : 0
+    const priority = config.priority === 'winning' ? 8 : 0
+    const controlError = Math.floor(deterministicRoll(state.elapsed, 'pit', config.circuit) * 23)
+    recordPitSpeed(state, Math.round(61 + urgency + priority + state.rain * 5 + controlError))
+  }
+}
+
+export function recordTrackLimitViolation(state: RaceSnapshot): void {
+  state.trackLimitStrikes += 1
+  state.eventLog.push('Stewards: track limits warning ' + state.trackLimitStrikes + '/3')
+  if (state.trackLimitStrikes % 3 === 0) addPenalty(state, 5, 'Three track-limit violations')
+}
+
+export function recordPitSpeed(state: RaceSnapshot, speedKph: number): void {
+  state.pitSpeedKph = Math.round(speedKph)
+  state.pitSpeedViolationChecked = true
+  if (state.pitSpeedKph > 80) addPenalty(state, 5, 'Pit-lane speeding: ' + state.pitSpeedKph + ' km/h')
+  else state.eventLog.push('Pit limiter: ' + state.pitSpeedKph + ' km/h · within 80 km/h limit')
+}
+
+export function applyCollisionOutcome(state: RaceSnapshot, trailing: RacerState, leading: RacerState, severity: 'minor' | 'major', context = 'traffic contact'): void {
+  trailing.damage = severity
+  trailing.retired = severity === 'major'
+  if (severity === 'major' && leading.damage === 'none') leading.damage = 'minor'
+  state.eventLog.push((severity === 'major' ? 'Major accident' : 'Minor contact') + ': ' + trailing.name + ' and ' + leading.name + ' · ' + context)
+}
+
+function addPenalty(state: RaceSnapshot, seconds: number, reason: string): void {
+  state.penaltySeconds += seconds
+  state.penalties.push('+' + seconds + 's · ' + reason)
+  state.eventLog.push('PENALTY +' + seconds + 's: ' + reason)
 }
 
 function calculateIncidentRisk(state: RaceSnapshot, config: RaceConfig, strategy: StrategyCommand): number {
@@ -377,6 +438,7 @@ function deterministicRoll(time: number, first: string, second: string): number 
 }
 
 function stringScore(value: string): number { return [...value].reduce((total, character) => total + character.charCodeAt(0), 0) }
+function positiveModulo(value: number, divisor: number): number { return ((value % divisor) + divisor) % divisor }
 
 function rankPlayer(racers: RacerState[]): number { return [...racers].sort((a, b) => Number(a.retired) - Number(b.retired) || b.progress - a.progress).findIndex((racer) => racer.id === 'player') + 1 }
 function roundOne(value: number): number { return Math.round(value * 10) / 10 }

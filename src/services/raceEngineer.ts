@@ -60,6 +60,7 @@ export async function requestDebrief(
         fuelRemaining: race.fuelRemaining,
         weather: { rain: race.rain, airTemp: race.airTemp, trackTemp: race.trackTemp, humidity: race.humidity, windKph: race.windKph },
         events: race.eventLog,
+        stewarding: { trackLimitStrikes: race.trackLimitStrikes, penalties: race.penalties, penaltySeconds: race.penaltySeconds, pitSpeedKph: race.pitSpeedKph },
         setup: config,
       },
     }),

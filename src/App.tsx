@@ -1,82 +1,81 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { DebriefScreen } from './features/debrief/DebriefScreen'
+import { IntroScreen } from './features/intro/IntroScreen'
 import { RaceExperience } from './features/race/RaceExperience'
 import { SetupScreen } from './features/setup/SetupScreen'
-import { IntroScreen } from './features/intro/IntroScreen'
 import { TutorialScreen } from './features/tutorial/TutorialScreen'
 import { defaultConfig } from './game/config'
 import { createRunRecord } from './game/simulation'
 import type { CircuitId, RaceConfig, RaceSnapshot, RunRecord } from './game/types'
 
+type Screen = 'intro' | 'tutorial' | 'setup' | 'race' | 'debrief'
+
+const routes: Record<Screen, string> = { intro: '/', tutorial: '/tutorial', setup: '/setup', race: '/race', debrief: '/result' }
+
 export function App() {
-  const [screen, setScreen] = useState<'intro' | 'tutorial' | 'setup' | 'race' | 'debrief'>(() => {
-    const params = new URLSearchParams(window.location.search)
-    const qa = params.get('qa')
-    return qa === 'race' || qa === 'ardennes' || qa === 'british' || qa === 'catalunya'
-      ? 'race'
-      : params.get('qaHooks') === '1' ? 'setup' : 'intro'
-  })
+  const [screen, setScreen] = useState<Screen>(screenFromLocation)
   const [principalName, setPrincipalName] = useState(() => sessionStorage.getItem('neural-apex-principal') || '')
-  const [config, setConfig] = useState<RaceConfig>(() => {
+  const [config, setConfigState] = useState<RaceConfig>(() => {
+    const stored = readSession<RaceConfig>('neural-apex-config')
     const params = new URLSearchParams(window.location.search)
     const circuit = params.get('circuit') || params.get('qa')
     const circuits: CircuitId[] = ['ardennes', 'british', 'catalunya']
-    return circuits.includes(circuit as CircuitId)
-      ? { ...defaultConfig, circuit: circuit as CircuitId }
-      : defaultConfig
+    const base = stored || defaultConfig
+    return circuits.includes(circuit as CircuitId) ? { ...base, circuit: circuit as CircuitId } : base
   })
-  const [finalRace, setFinalRace] = useState<RaceSnapshot | null>(null)
-  const [runs, setRuns] = useState<RunRecord[]>([])
+  const [finalRace, setFinalRace] = useState<RaceSnapshot | null>(() => readSession('neural-apex-final-race'))
+  const [runs, setRuns] = useState<RunRecord[]>(() => readSession('neural-apex-runs') || [])
+
+  const navigate = useCallback((next: Screen, replace = false) => {
+    const keepQaHooks = new URLSearchParams(window.location.search).get('qaHooks') === '1'
+    const url = routes[next] + (keepQaHooks ? '?qaHooks=1' : '')
+    window.history[replace ? 'replaceState' : 'pushState']({}, '', url)
+    setScreen(next)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
+  useEffect(() => {
+    const onPopState = () => setScreen(screenFromLocation())
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  const setConfig = (next: RaceConfig) => {
+    setConfigState(next)
+    sessionStorage.setItem('neural-apex-config', JSON.stringify(next))
+  }
 
   const enterLab = (name = principalName || 'Team Principal') => {
     const resolvedName = name.trim() || 'Team Principal'
     setPrincipalName(resolvedName)
     sessionStorage.setItem('neural-apex-principal', resolvedName)
-    setScreen('setup')
+    navigate('setup')
   }
 
-  if (screen === 'intro') return <IntroScreen initialName={principalName} onEnter={enterLab} onTutorial={() => setScreen('tutorial')} />
-  if (screen === 'tutorial') return <TutorialScreen onBack={() => setScreen('intro')} onStart={() => enterLab()} />
+  if (screen === 'intro') return <IntroScreen initialName={principalName} onEnter={enterLab} onTutorial={() => navigate('tutorial')} />
+  if (screen === 'tutorial') return <TutorialScreen onBack={() => navigate('intro')} onStart={() => enterLab()} />
+  if (screen === 'setup') return <SetupScreen config={config} principalName={principalName || 'Team Principal'} lastRun={runs.at(-1)} onChange={setConfig} onStart={() => { setFinalRace(null); sessionStorage.removeItem('neural-apex-final-race'); navigate('race') }} onTutorial={() => navigate('tutorial')} />
+  if (screen === 'race') return <RaceExperience config={config} principalName={principalName || 'Team Principal'} onFinish={(race) => {
+    const nextRuns = [...runs, createRunRecord(race, config, runs.length + 1)]
+    setFinalRace(race); setRuns(nextRuns)
+    sessionStorage.setItem('neural-apex-final-race', JSON.stringify(race)); sessionStorage.setItem('neural-apex-runs', JSON.stringify(nextRuns))
+    navigate('debrief')
+  }} onExit={() => navigate('setup')} />
+  return <DebriefScreen race={finalRace} config={config} currentRun={runs.at(-1)} previousRun={runs.at(-2)} onRunAgain={() => navigate('race')} onAdjust={() => navigate('setup')} />
+}
 
-  if (screen === 'setup') {
-    return (
-      <SetupScreen
-        config={config}
-        principalName={principalName || 'Team Principal'}
-        lastRun={runs.at(-1)}
-        onChange={setConfig}
-        onStart={() => {
-          setFinalRace(null)
-          setScreen('race')
-        }}
-        onTutorial={() => setScreen('tutorial')}
-      />
-    )
-  }
+function screenFromLocation(): Screen {
+  const params = new URLSearchParams(window.location.search)
+  const qa = params.get('qa')
+  if (qa === 'race' || qa === 'ardennes' || qa === 'british' || qa === 'catalunya') return 'race'
+  if (params.get('qaHooks') === '1' && window.location.pathname === '/') return 'setup'
+  if (window.location.pathname === '/tutorial') return 'tutorial'
+  if (window.location.pathname === '/setup') return 'setup'
+  if (window.location.pathname === '/race') return 'race'
+  if (window.location.pathname === '/result') return 'debrief'
+  return 'intro'
+}
 
-  if (screen === 'race') {
-    return (
-      <RaceExperience
-        config={config}
-        principalName={principalName || 'Team Principal'}
-        onFinish={(race) => {
-          setFinalRace(race)
-          setRuns((current) => [...current, createRunRecord(race, config, current.length + 1)])
-          setScreen('debrief')
-        }}
-        onExit={() => setScreen('setup')}
-      />
-    )
-  }
-
-  return (
-    <DebriefScreen
-      race={finalRace}
-      config={config}
-      currentRun={runs.at(-1)}
-      previousRun={runs.at(-2)}
-      onRunAgain={() => setScreen('race')}
-      onAdjust={() => setScreen('setup')}
-    />
-  )
+function readSession<Value>(key: string): Value | null {
+  try { const value = sessionStorage.getItem(key); return value ? JSON.parse(value) as Value : null } catch { return null }
 }

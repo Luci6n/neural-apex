@@ -38,7 +38,7 @@ export function TimingTower({ snapshot, config, principalName }: { snapshot: Rac
           </li>
         ))}
       </ol>
-      <footer><span className={snapshot.rain > 0.05 ? 'weather-live wet' : 'weather-live'} />{snapshot.rain > 0.05 ? 'RAIN ' + Math.round(snapshot.rain * 100) + '%' : 'TRACK DRY'}<b>{snapshot.position === 1 ? 'LEADING' : 'P' + snapshot.position}</b></footer>
+      <footer><span className={snapshot.rain > 0.05 ? 'weather-live wet' : 'weather-live'} />{snapshot.rain > 0.05 ? 'RAIN ' + Math.round(snapshot.rain * 100) + '%' : 'TRACK DRY'}{snapshot.penaltySeconds > 0 && <em>+{snapshot.penaltySeconds}s PEN</em>}<b>{snapshot.position === 1 ? 'LEADING' : 'P' + snapshot.position}</b></footer>
     </aside>
   )
 }

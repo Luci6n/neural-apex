@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import type { CSSProperties } from 'react'
 import { CircuitMap } from '../../components/CircuitMap'
 import { botPresetLabels, createBotGrid } from '../../game/config'
 import { formatSeconds, predictIncidentRisk, predictLapSeconds } from '../../game/simulation'
@@ -17,7 +18,7 @@ import type {
   ScannerFocus,
   TyreCompound,
 } from '../../game/types'
-import { trackProfiles } from '../../game/tracks'
+import { createTrackCurve, trackProfiles } from '../../game/tracks'
 import { tyreOptions, tyreProfiles } from '../../game/tyres'
 import { AISystemVisual } from '../../components/AISystemVisual'
 
@@ -82,32 +83,36 @@ export function SetupScreen({
           </div>
 
           <section className="preflight-ai" aria-label="AI crew preflight briefing">
-            <article className="ml"><b>ML</b><AISystemVisual system="ML" active /><div><strong>PREDICTOR</strong><span>READS · Past runs + setup</span><p>Forecasts {formatSeconds(predictLapSeconds(config))} lap, 68% rain probability, and fuel/tyre risk.</p></div><em>MED CONFIDENCE</em></article>
-            <article className="dl"><b>DL</b><AISystemVisual system="DL" /><div><strong>PATTERN SCANNER</strong><span>READS · Live {config.scannerFocus} signals</span><p>Will detect track state, tyre heat, grip loss, and complex telemetry changes.</p></div><em>STANDBY</em></article>
-            <article className="rl"><b>RL</b><AISystemVisual system="RL" /><div><strong>ADAPTIVE DRIVER</strong><span>READS · Actions + consequences</span><p>Will adjust line, braking, and pace to prioritise {config.priority}.</p></div><em>POLICY READY</em></article>
+            <article className="ml"><b>ML</b><AISystemVisual system="ML" active /><div className="preflight-copy"><strong>PREDICTOR</strong><span>READS · Past runs + setup</span><p>Forecasts {formatSeconds(predictLapSeconds(config))} lap, 68% rain probability, and fuel/tyre risk.</p></div><em className="preflight-status">MED CONFIDENCE</em></article>
+            <article className="dl"><b>DL</b><AISystemVisual system="DL" /><div className="preflight-copy"><strong>PATTERN SCANNER</strong><span>READS · Live {config.scannerFocus} signals</span><p>Will detect track state, tyre heat, grip loss, and complex telemetry changes.</p></div><em className="preflight-status">STANDBY</em></article>
+            <article className="rl"><b>RL</b><AISystemVisual system="RL" /><div className="preflight-copy"><strong>ADAPTIVE DRIVER</strong><span>READS · Actions + consequences</span><p>Will adjust line, braking, and pace to prioritise {config.priority}.</p></div><em className="preflight-status">POLICY READY</em></article>
           </section>
 
           <div className="configuration-grid">
-            <ChoiceGroup<CircuitId> label="Circuit" value={config.circuit} options={[
-              ['ardennes', 'Ardennes Rise'], ['british', 'British Apex'], ['catalunya', 'Catalunya Lab'],
-            ]} onChange={(value) => update('circuit', value)} />
-            <ChoiceGroup<RunType> label="Session" value={config.runType} options={[
-              ['test', 'Test run'], ['qualifying', 'Qualifying'], ['race', 'Race'],
-            ]} onChange={(value) => update('runType', value)} />
-            <LapSelector value={config.laps} onChange={(value) => update('laps', value)} />
-            <ChoiceGroup<TyreCompound> label="Starting tyre" value={config.tyre} options={tyreOptions} onChange={(value) => update('tyre', value)} />
-            <ChoiceGroup<FuelStrategy> label="Fuel load" value={config.fuel} options={[
-              ['light', 'Light'], ['balanced', 'Balanced'], ['safe', 'Safe'],
-            ]} onChange={(value) => update('fuel', value)} />
-            <ChoiceGroup<AeroBalance> label="Aero balance" value={config.aero} options={[
-              ['speed', 'Top speed'], ['balanced', 'Balanced'], ['grip', 'Grip'],
-            ]} onChange={(value) => update('aero', value)} />
-            <ChoiceGroup<PitPolicy> label="Weather policy" value={config.pitPolicy} options={[
-              ['forecast', 'Trust forecast'], ['reactive', 'Wait for grip'], ['track-position', 'Protect position'],
-            ]} onChange={(value) => update('pitPolicy', value)} />
-            <ChoiceGroup<DriverPriority> label="Adaptive priority" value={config.priority} options={[
-              ['finish', 'Finish safely'], ['tyres', 'Protect tyres'], ['winning', 'Chase win'],
-            ]} onChange={(value) => update('priority', value)} />
+            <div className="configuration-column">
+              <ChoiceGroup<CircuitId> label="Circuit" value={config.circuit} options={[
+                ['ardennes', 'Ardennes Rise'], ['british', 'British Apex'], ['catalunya', 'Catalunya Lab'],
+              ]} onChange={(value) => update('circuit', value)} />
+              <LapSelector value={config.laps} onChange={(value) => update('laps', value)} />
+              <ChoiceGroup<FuelStrategy> label="Fuel load" value={config.fuel} options={[
+                ['light', 'Light'], ['balanced', 'Balanced'], ['safe', 'Safe'],
+              ]} onChange={(value) => update('fuel', value)} />
+              <ChoiceGroup<PitPolicy> label="Weather policy" value={config.pitPolicy} options={[
+                ['forecast', 'Trust forecast'], ['reactive', 'Wait for grip'], ['track-position', 'Protect position'],
+              ]} onChange={(value) => update('pitPolicy', value)} />
+            </div>
+            <div className="configuration-column">
+              <ChoiceGroup<RunType> label="Session" value={config.runType} options={[
+                ['test', 'Test run'], ['qualifying', 'Qualifying'], ['race', 'Race'],
+              ]} onChange={(value) => update('runType', value)} />
+              <ChoiceGroup<TyreCompound> label="Starting tyre" value={config.tyre} options={tyreOptions} onChange={(value) => update('tyre', value)} />
+              <ChoiceGroup<AeroBalance> label="Aero balance" value={config.aero} options={[
+                ['speed', 'Top speed'], ['balanced', 'Balanced'], ['grip', 'Grip'],
+              ]} onChange={(value) => update('aero', value)} />
+              <ChoiceGroup<DriverPriority> label="Adaptive priority" value={config.priority} options={[
+                ['finish', 'Finish safely'], ['tyres', 'Protect tyres'], ['winning', 'Chase win'],
+              ]} onChange={(value) => update('priority', value)} />
+            </div>
           </div>
         </div>
 
@@ -189,12 +194,36 @@ function ChoiceGroup<Value extends string>({
       <div>
         {options.map(([option, text]) => (
           <button type="button" key={option} className={value === option ? 'active' : ''} onClick={() => onChange(option)}>
-            {text}
+            <OptionVisual label={label} value={option} />
+            <span>{text}</span>
           </button>
         ))}
       </div>
     </fieldset>
   )
+}
+
+function OptionVisual({ label, value }: { label: string; value: string }) {
+  if (label === 'Circuit') {
+    const curve = createTrackCurve(value as CircuitId)
+    const points = Array.from({ length: 80 }, (_, index) => {
+      const point = curve.getPointAt(index / 80)
+      return point.x + ',' + -point.z
+    }).join(' ')
+    return <svg className="option-circuit" viewBox="-70 -48 140 96" aria-hidden="true"><polyline points={points} /></svg>
+  }
+  if (label === 'Starting tyre') {
+    const profile = tyreProfiles[value as TyreCompound]
+    return <i className="option-tyre" style={{ '--option-color': profile.color } as CSSProperties}>{profile.code}</i>
+  }
+  if (label === 'Session') return <i className={'option-session ' + value}><span /><span /><span /></i>
+  if (label === 'Fuel load') return <i className={'option-fuel ' + value}><span /></i>
+  if (label === 'Aero balance') return <i className={'option-aero ' + value}><span /><span /></i>
+  if (label === 'Weather policy') return <i className={'option-weather ' + value}>☁<span>↗</span></i>
+  if (label === 'Adaptive priority') return <i className={'option-priority ' + value}><span /><span /><span /></i>
+  if (label === 'Opponent model') return <i className={'option-opponent ' + value}>◆</i>
+  if (label === 'Scanner allocation') return <i className={'option-scanner ' + value}><span /></i>
+  return null
 }
 
 const setupHelp: Record<string, string> = {

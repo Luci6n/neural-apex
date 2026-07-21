@@ -79,7 +79,16 @@ export interface RaceSnapshot {
   racers: RacerState[]
   eventLog: string[]
   pitTimeRemaining: number
+  pitRequested: boolean
+  pitEntryProgress: number | null
+  pendingTyre: TyreCompound | null
   incidentRisk: number
+  trackLimitStrikes: number
+  trackLimitCooldown: number
+  penaltySeconds: number
+  penalties: string[]
+  pitSpeedKph: number | null
+  pitSpeedViolationChecked: boolean
 }
 
 export interface DebriefData {

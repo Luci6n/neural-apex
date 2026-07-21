@@ -327,7 +327,7 @@ function WorldKit({ curve, circuit, rain, windKph }: { curve: THREE.CatmullRomCu
   return (
     <>
       <InstancedForest positions={trees} />
-      <PitComplex curve={curve} />
+      <PitComplex curve={curve} circuit={circuit} />
       <CircuitBackdrop circuit={circuit} rain={rain} />
       <MovingClouds rain={rain} windKph={windKph} />
       <Checkpoint curve={curve} t={0.02} color="#ff633f" />
@@ -351,15 +351,17 @@ function InstancedForest({ positions }: { positions: THREE.Vector3[] }) {
   return <><instancedMesh ref={trunks} args={[undefined, undefined, positions.length]} castShadow><boxGeometry args={[.55, 2.3, .55]} /><meshStandardMaterial color="#80533b" /></instancedMesh><instancedMesh ref={crowns} args={[undefined, undefined, positions.length]} castShadow><icosahedronGeometry args={[1.55, 0]} /><meshStandardMaterial color="#31824a" roughness={1} /></instancedMesh></>
 }
 
-function PitComplex({ curve }: { curve: THREE.CatmullRomCurve3 }) {
-  const placement = useMemo(() => trackPlacement(curve, .055, 8.2), [curve])
+function PitComplex({ curve, circuit }: { curve: THREE.CatmullRomCurve3; circuit: RaceConfig['circuit'] }) {
+  const placement = useMemo(() => {
+    const settings = circuit === 'ardennes' ? [.965, -12] : circuit === 'british' ? [.96, 12] : [.035, -12]
+    return trackPlacement(curve, settings[0], settings[1])
+  }, [circuit, curve])
   return <group position={placement.position} rotation-y={placement.rotation}>
-    <mesh receiveShadow position={[0, .06, 0]}><boxGeometry args={[3.2, .12, 24]} /><meshStandardMaterial color="#56636d" /></mesh>
-    <mesh castShadow position={[5.4, 2.1, 0]}><boxGeometry args={[6.2, 4.2, 24]} /><meshStandardMaterial color="#e7e0c9" roughness={.75} /></mesh>
-    {[-9,-5.5,-2,1.5,5,8.5].map((z) => <mesh key={z} position={[2.25, 1.25, z]}><boxGeometry args={[.12, 2.2, 2.7]} /><meshStandardMaterial color="#102e4d" /></mesh>)}
-    <mesh castShadow position={[1.2, 4.8, 0]}><boxGeometry args={[14, .4, 1]} /><meshStandardMaterial color="#54e6ef" /></mesh>
-    <mesh castShadow position={[-6.2, 1.6, -1]}><boxGeometry args={[7.4, 3.2, 14]} /><meshStandardMaterial color="#d4dae0" /></mesh>
-    <mesh position={[-2.45, 2, -1]}><boxGeometry args={[.1, 1.2, 11]} /><meshStandardMaterial color="#0a2948" /></mesh>
+    <mesh receiveShadow position={[0, .06, 0]}><boxGeometry args={[2.6, .12, 19]} /><meshStandardMaterial color="#56636d" /></mesh>
+    <mesh castShadow position={[4.4, 1.75, 0]}><boxGeometry args={[4.8, 3.5, 19]} /><meshStandardMaterial color="#e7e0c9" roughness={.75} /></mesh>
+    {[-7,-3.5,0,3.5,7].map((z) => <mesh key={z} position={[1.95, 1.05, z]}><boxGeometry args={[.12, 1.8, 2.7]} /><meshStandardMaterial color="#102e4d" /></mesh>)}
+    <mesh castShadow position={[0, 4.1, 0]}><boxGeometry args={[11, .35, .8]} /><meshStandardMaterial color="#54e6ef" /></mesh>
+    <mesh castShadow position={[-4.6, 1.4, 0]}><boxGeometry args={[5.8, 2.8, 11]} /><meshStandardMaterial color="#d4dae0" /></mesh>
   </group>
 }
 
@@ -469,7 +471,7 @@ function createStripGeometry(curve: THREE.CatmullRomCurve3, inner: number, outer
 }
 
 function createTerrainGeometry(curve: THREE.CatmullRomCurve3) {
-  const size = 170
+  const size = 230
   const segments = 58
   const samples = curve.getSpacedPoints(180)
   const vertices: number[] = []

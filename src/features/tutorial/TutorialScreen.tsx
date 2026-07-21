@@ -1,9 +1,11 @@
+import { AISystemVisual } from '../../components/AISystemVisual'
+
 const steps = [
-  ['01', 'Configure', 'Choose the circuit, 1–8 laps, starting compound, fuel, aero, weather policy, and what the AI systems should prioritise.'],
-  ['02', 'Launch', 'Every car follows its own autonomous line. You observe from the pit wall—there are no steering, throttle, or brake controls.'],
-  ['03', 'Interpret', 'Compare the forecast with live detection and the driver’s preferred response. Confidence is evidence, not certainty.'],
-  ['04', 'Decide', 'Change pace or tyre conservation, then choose whether to stay out, fit intermediates, or prepare for heavy rain with full wets.'],
-  ['05', 'Compare', 'Use the debrief to connect setup → evidence → decision → consequence. Change one variable and run the experiment again.'],
+  ['01', 'Configure', 'Set circuit, laps, tyre, fuel, aero, and AI priorities.', 'setup'],
+  ['02', 'Launch', 'Cars drive themselves. You watch from the pit wall.', 'launch'],
+  ['03', 'Interpret', 'Compare forecast, live detection, and adaptation.', 'signals'],
+  ['04', 'Decide', 'Change pace or choose the right rain tyre.', 'decision'],
+  ['05', 'Compare', 'Change one variable and measure the next run.', 'compare'],
 ] as const
 
 const systems = [
@@ -17,16 +19,16 @@ export function TutorialScreen({ onBack, onStart }: { onBack: () => void; onStar
     <main className="tutorial-shell page-transition">
       <header className="tutorial-header"><div><p className="eyebrow">Pit wall briefing · 2 minutes</p><h1>HOW TO RUN<br />THE RACE.</h1></div><button onClick={onBack}>← Back</button></header>
       <section className="tutorial-steps">
-        {steps.map(([number, title, copy]) => <article key={number}><span>{number}</span><div><h2>{title}</h2><p>{copy}</p></div></article>)}
+        {steps.map(([number, title, copy, visual]) => <article key={number}><span>{number}</span><StepVisual kind={visual} /><div><h2>{title}</h2><p>{copy}</p></div></article>)}
       </section>
       <section className="tutorial-learning">
         <div className="tutorial-section-heading"><span>THE THREE SYSTEMS</span><h2>Same race. Different evidence.</h2><p>The educational systems simulate three distinct AI jobs. None of them replaces your judgement.</p></div>
         <div className="tutorial-system-grid">
-          {systems.map(([code, title, input, output, caution]) => <article className={code.toLowerCase()} key={code}><b>{code}</b><h3>{title}</h3><dl><dt>READS</dt><dd>{input}</dd><dt>GIVES YOU</dt><dd>{output}</dd><dt>WATCH OUT</dt><dd>{caution}</dd></dl></article>)}
+          {systems.map(([code, title, input, output, caution]) => <article className={code.toLowerCase()} key={code}><div className="tutorial-system-visual"><b>{code}</b><AISystemVisual system={code} active /></div><h3>{title}</h3><dl><dt>READS</dt><dd>{input}</dd><dt>OUTPUT</dt><dd>{output}</dd><dt>LIMIT</dt><dd>{caution}</dd></dl></article>)}
         </div>
       </section>
       <section className="tutorial-dashboard">
-        <div><span>READ THE BROADCAST</span><h2>What to watch live</h2></div>
+        <div><span>READ THE BROADCAST</span><h2>What to watch live</h2><DashboardDemo /></div>
         <ul>
           <li><b>Timing tower</b><span>Race position and interval; or best lap and out-lap status in practice/qualifying.</span></li>
           <li><b>Tyre badge</b><span>C1–C5 dry compounds, green intermediate, or blue full wet.</span></li>
@@ -43,4 +45,16 @@ export function TutorialScreen({ onBack, onStart }: { onBack: () => void; onStar
       <section className="tutorial-callout"><div><span>THE RULE</span><h2>You never drive the car.</h2><p>Your job is to prepare the system, interpret imperfect evidence, and make the final strategic decision.</p></div><button className="start-race" onClick={onStart}><span>Open strategy setup</span><b>↗</b></button></section>
     </main>
   )
+}
+
+function StepVisual({ kind }: { kind: string }) {
+  if (kind === 'setup') return <div className="step-visual setup"><i /><i /><i /><i /></div>
+  if (kind === 'launch') return <div className="step-visual launch"><i /><span>›</span><i /></div>
+  if (kind === 'signals') return <div className="step-visual signals"><b>ML</b><b>DL</b><b>RL</b></div>
+  if (kind === 'decision') return <div className="step-visual decision"><i>STAY</i><span>OR</span><i>PIT</i></div>
+  return <div className="step-visual compare"><i style={{ height: '42%' }} /><i style={{ height: '72%' }} /><span>+30%</span></div>
+}
+
+function DashboardDemo() {
+  return <div className="tutorial-tower" aria-label="Example live timing tower"><header><b>RACE</b><span>LAP 2 / 5</span></header><div><b>1</b><i /><strong>NAX</strong><span>INTERVAL</span><em>C3</em></div><div><b>2</b><i /><strong>CC</strong><span>+0.8</span><em>C2</em></div><div><b>3</b><i /><strong>VV</strong><span>IN PIT</span><em>I</em></div><footer>TRACK 27° · RAIN 34%</footer></div>
 }
