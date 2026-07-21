@@ -200,14 +200,14 @@ Explain uncertainty directly. Never claim the educational ML/DL/RL models are tr
 
 | Concern | Source |
 | --- | --- |
-| Global tokens and responsive rules | src/styles.css |
-| Intro 3D scenes | src/components/IntroScene.tsx |
-| Race world and procedural geometry | src/components/RaceScene.tsx |
-| AI diagrams | src/components/AISystemVisual.tsx |
+| Global tokens and responsive rules | src/styles/index.css |
+| Intro 3D scenes | src/features/intro/IntroScene.tsx |
+| Race world and procedural geometry | src/features/race/RaceScene.tsx |
+| AI diagrams | src/shared/ui/AISystemVisual.tsx |
 | Setup visual controls | src/features/setup/SetupScreen.tsx |
 | Live broadcast and strategy windows | src/features/race |
 | Tutorial visual language | src/features/tutorial/TutorialScreen.tsx |
-| Simulation formulas and racing line | src/game/simulation.ts and src/game/tracks.ts |
+| Simulation formulas and racing line | src/simulation/engine.ts and src/simulation/tracks.ts |
 
 ## Design QA checklist
 

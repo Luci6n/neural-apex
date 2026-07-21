@@ -171,8 +171,8 @@ Verified runtime evidence:
 
 Repository evidence:
 
-- backend/main.py contains the server-side Responses API integration.
-- src/services/raceEngineer.ts contains the client API boundary.
+- `backend/main.py` contains HTTP and SPA wiring; `backend/schemas.py`, `backend/prompts.py`, and `backend/race_engineer.py` separate validation, instructions, OpenAI execution, streaming, and fallback behavior.
+- `src/services/race-engineer/client.ts` contains the typed browser API and NDJSON boundary.
 - src/features/race/RaceExperience.tsx contains the conflict interaction.
 - src/features/debrief/DebriefScreen.tsx contains the post-race coaching flow.
 - tests/e2e/race-flow.spec.ts proves the integrated path.
@@ -187,4 +187,3 @@ The Devpost submission requires evidence of Codex usage. Before submitting:
 4. Link this document from the README and Devpost project description where useful.
 
 Session ID: add after running /feedback.
-

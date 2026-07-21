@@ -1,6 +1,6 @@
 # Development Checklist
 
-Updated: 2026-07-21
+Updated: 2026-07-22
 
 This file is the persistent implementation checklist for the current competition build. It is updated as feedback is implemented and verified.
 
@@ -116,10 +116,16 @@ This file is the persistent implementation checklist for the current competition
 - [x] Document frontend deterministic simulation vs FastAPI language boundary.
 - [x] Document that every GPT strategy/debrief call receives full relevant race context and validated structured output.
 - [x] Add gameplay calculation/mode guide and seeded-streaming ADR.
-- [x] Update verification evidence for the current 46-unit/3-E2E checkpoint.
+- [x] Update verification evidence for the current 57-frontend/8-backend/3-E2E checkpoint.
 - [ ] Run topology tests, unit tests, TypeScript, production build, E2E, live API, WebGL QA, and Docker.
 - [x] Checkpoint commit: 7ec46c7.
 - [ ] Commit penalty/navigation/circuit/scenery pass.
 - [ ] Commit documentation and final verification pass.
 - [ ] Final terminology polish: research and use authentic pit-wall calls such as Box, box; stay out; pit confirm; and pit limiter.
 - [x] Add consistent hover/press motion and reduced-motion-safe component depth.
+- [x] Refactor the frontend into app, feature, simulation, service, shared UI, and styles boundaries.
+- [x] Split FastAPI routes, schemas, prompts, and race-engineer execution into dedicated modules.
+- [x] Add CONTRIBUTING.md, ROADMAP.md, project-structure documentation, and hackathon asset guides.
+- [x] Add a roughly two-minute narrated demo script with recording fallbacks.
+- [x] Move all automated tests into independent root `tests/unit`, `tests/backend`, and `tests/e2e` directories.
+- [x] Structure `.gitignore` by dependency, secret, build, test, editor, and hackathon-asset concerns.

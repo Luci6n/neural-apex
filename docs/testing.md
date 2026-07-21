@@ -5,10 +5,12 @@
 | Command | Purpose |
 | --- | --- |
 | npm run lint | TypeScript project check |
-| npm test -- --run | Deterministic simulation and circuit topology suite |
+| npm test | Vitest UI, API-client, simulation, and circuit topology suite |
+| npm run test:backend | Pytest FastAPI endpoint, schema, streaming, and fallback suite |
+| npm run test:all | Frontend and backend automated suites |
 | npm run build | Production frontend and lazy 3D chunks |
 | npm run test:e2e | Route, race, strategy, streaming, pit, debrief, and comparison flow |
-| python -m py_compile backend/main.py | FastAPI syntax check |
+| python -m compileall -q backend | Compile every FastAPI/schema/prompt/service module |
 | docker compose build | Reproducible full-stack container |
 
 ## Unit and topology matrix
@@ -24,6 +26,20 @@
 | Stewards | Three limits add five seconds; pit speed over 80 adds five seconds; final time includes penalties |
 | Circuits | Raw centre, spline, road edges, pit lane, and pit service segment remain non-crossing |
 | Records | Completed setup and outcome can be compared on the next run |
+| Shared UI | Model text is safely structured and HTML is escaped |
+| Service client | Full context is posted; NDJSON deltas/completion/errors are handled |
+| App shell | Public routes and QA hooks map to the intended screens |
+
+## Backend matrix
+
+| Area | Required assertions |
+| --- | --- |
+| Health | Readiness and AI configuration are reported without exposing a secret |
+| Schemas | Invalid questions, decisions, alignment, and structured verdicts are rejected |
+| Explain | Deterministic votes and supplied measurements survive the local fallback path |
+| Debrief | All five learning sections remain present |
+| Streaming | Status appears first, deltas precede completion, and source is explicit |
+| Parsing | Partial streamed JSON strings decode without crashing |
 
 ## End-to-end flows
 
@@ -36,7 +52,7 @@ The Playwright suite covers:
 5. a second stay-out run;
 6. responsive strategy-window layout and AI-rail/telemetry separation.
 
-Latest automated result: 46/46 Vitest assertions and 3/3 Playwright flows pass.
+Latest automated result: 57/57 Vitest assertions, 8/8 pytest checks, and 3/3 Playwright flows pass.
 
 ## API
 

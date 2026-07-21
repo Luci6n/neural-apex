@@ -32,7 +32,7 @@ Mode never secretly makes a car faster. Quick Start changes visible setup values
 
 ## Formula reference
 
-These equations mirror the implementation in src/game/simulation.ts. They are calibrated for a readable 1–32 lap educational run; they are not an FIA vehicle-dynamics model.
+These equations mirror the implementation in `src/simulation/engine.ts`. They are calibrated for a readable 1–32 lap educational run; they are not an FIA vehicle-dynamics model.
 
 ### Shared helpers
 
@@ -326,4 +326,4 @@ Incident risk combines setup risk, driver style, weather, grip, tyre wear, live 
 - FastAPI keeps the OpenAI key server-side and sends the complete relevant state to GPT-5.6.
 - GPT-5.6 explains evidence during strategy windows and synthesizes the post-race lesson. It does not calculate pace, choose for the player, or alter scores.
 
-Primary implementation: `src/game/simulation.ts`, `src/game/tracks.ts`, `src/game/tyres.ts`, and `backend/main.py`.
+Primary implementation: `src/simulation/engine.ts`, `src/simulation/tracks.ts`, and `src/simulation/tyres.ts`. The public application import boundary is `src/simulation/index.ts`. GPT explanations are separated across `backend/main.py`, `backend/schemas.py`, `backend/prompts.py`, and `backend/race_engineer.py`.

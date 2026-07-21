@@ -435,10 +435,10 @@ Preferred MVP options:
 
 For the MVP:
 
-- one compact circuit;
+- three enlarged non-crossing circuits;
 - one player-controlled team;
 - three to five bot cars;
-- one to three laps;
+- one to thirty-two configurable laps with short presets;
 - short race duration;
 - simple waypoint-based navigation;
 - autonomous arcade-style vehicle movement;

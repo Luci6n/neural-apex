@@ -55,7 +55,7 @@ The MVP must include:
 - three enlarged, non-crossing blocky 3D circuits;
 - one player team;
 - at least three bot opponents;
-- one 1-8 lap autonomous race, qualifying session, or test run;
+- one 1-32 lap autonomous race, qualifying session, or test run with short presets;
 - pre-run tyre, fuel, aero, AI-priority, and strategy choices;
 - telemetry and setup consequences visible during the run;
 - at least one rerun comparison;
@@ -150,6 +150,7 @@ docs/
 ├── tutorial-flow.md
 ├── setup-and-deployment.md
 ├── testing.md
+├── project-structure.md
 └── decisions/
 ```
 
@@ -266,6 +267,7 @@ Minimum verification:
 npm ci
 npm run lint
 npm test -- --run
+npm run test:backend
 npm run build
 docker compose build
 ```

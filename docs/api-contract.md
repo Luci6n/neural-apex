@@ -51,3 +51,11 @@ Streaming response uses `application/x-ndjson`:
 The race object is the complete final snapshot. The validated response separates prediction, detection, adaptation, team decision, and lesson. The streaming variant uses the same status/delta/complete NDJSON protocol.
 
 Both endpoints return deterministic fallback text if GPT-5.6 is missing or fails. Neither endpoint can mutate gameplay.
+
+## Implementation ownership
+
+- `backend/main.py` exposes routes and streaming response headers.
+- `backend/schemas.py` validates requests and structured model output.
+- `backend/prompts.py` stores the race-engineer and post-race instructions.
+- `backend/race_engineer.py` calls OpenAI, parses structured streams, and supplies explicit local fallbacks.
+- `src/services/race-engineer/client.ts` serializes the complete browser snapshot and parses NDJSON events.

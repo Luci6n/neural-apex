@@ -8,6 +8,16 @@ There are no steering, throttle, braking, or boost controls. Player skill comes 
 
 [OpenAI Buildathon competition](https://openai.devpost.com/)
 
+## Product preview
+
+![Neural Apex intro and team-principal registration](docs/assets/screenshots/intro-command-center.png)
+
+*Enter as team principal and meet the Predictor, Pattern Scanner, and Adaptive Driver before configuring the experiment.*
+
+![Neural Apex autonomous 3D race with timing, telemetry, AI evidence, and pit-wall controls](docs/assets/screenshots/autonomous-race.png)
+
+*Watch the cars drive themselves while timing, tyre state, grip, incident risk, and all three AI systems update around the circuit.*
+
 ## The learning idea
 
 Neural Apex turns three abstract AI ideas into three visible race-team jobs:
@@ -101,11 +111,15 @@ GPT-5.6 never controls a car, chooses a strategy, calculates a result, or change
 
     neural-apex/
     ├── backend/
-    │   └── main.py                  FastAPI, OpenAI calls, fallbacks, SPA serving
+    │   ├── main.py                  FastAPI routes and SPA serving
+    │   ├── schemas.py               Request and structured-output contracts
+    │   ├── prompts.py               Race-engineer and debrief instructions
+    │   └── race_engineer.py         OpenAI streaming and local fallbacks
     ├── docs/
     │   ├── decisions/               Architecture and product decisions
     │   ├── PRD_v2.md                Current autonomous-game source of truth
     │   ├── architecture.md
+    │   ├── project-structure.md
     │   ├── ai-learning-systems.md
     │   ├── api-contract.md
     │   ├── bot-system.md
@@ -114,19 +128,25 @@ GPT-5.6 never controls a car, chooses a strategy, calculates a result, or change
     │   ├── testing.md
     │   └── tutorial-flow.md
     ├── src/
-    │   ├── components/              Reusable 3D scenes, circuit maps, and AI instruments
+    │   ├── app/                     Navigation, session state, route orchestration
     │   ├── features/
-    │   │   ├── intro/               Registration and 3D product introduction
+    │   │   ├── intro/               Registration and intro 3D scenes
     │   │   ├── tutorial/            Visual beginner briefing
     │   │   ├── setup/               Experiment configuration
-    │   │   ├── race/                Pit wall and autonomous run
+    │   │   ├── race/                Pit wall, timing, and autonomous 3D run
     │   │   └── debrief/             Learning and run comparison
-    │   ├── game/                    Types, bot config, deterministic simulation
-    │   ├── services/                FastAPI client boundary
-    │   ├── App.tsx
-    │   └── styles.css
-    ├── tests/e2e/                    Routed two-run autonomous strategy test
+    │   ├── services/race-engineer/  Typed FastAPI/NDJSON client boundary
+    │   ├── shared/ui/               Reusable circuit and AI presentation
+    │   ├── simulation/              Public deterministic race-domain API
+    │   └── styles/index.css         Ordered global visual system
+    ├── tests/
+    │   ├── unit/                     Frontend, service, simulation, topology tests
+    │   ├── backend/                  FastAPI schema, endpoint, stream, fallback tests
+    │   └── e2e/                      Routed Playwright strategy flows
     ├── CHANGELOG.md
+    ├── CONTRIBUTING.md
+    ├── DESIGN.md
+    ├── ROADMAP.md
     ├── Dockerfile
     ├── docker-compose.yml
     └── package.json
@@ -218,17 +238,22 @@ For the exact effect of every mode, setup choice, weather variable, driver style
 | npm run dev:api | Start only FastAPI |
 | npm run lint | TypeScript project check |
 | npm test | Deterministic simulation unit tests |
+| npm run test:frontend | Vitest UI, service, simulation, and topology suite |
+| npm run test:backend | Pytest FastAPI/schema/stream/fallback suite |
+| npm run test:all | Frontend and backend suites |
 | npm run test:e2e | Two autonomous runs, live GPT flow, and comparison |
 | npm run build | Production frontend build |
 | npm run preview | Preview the built frontend |
 | npm start | Start FastAPI, which serves the built SPA |
+| npm run verify | TypeScript, frontend/backend tests, and production build |
 
 ## Verification evidence
 
 Current verified checks:
 
 - TypeScript: pass
-- Simulation and circuit tests: 46/46 pass
+- Frontend unit, UI, service, simulation, and topology tests: 57/57 pass
+- Backend endpoint, schema, streaming, parsing, and fallback tests: 8/8 pass
 - Production build: pass
 - Playwright autonomous flows: 3/3 pass
 - Live OpenAI request through FastAPI: pass, source openai
@@ -266,21 +291,14 @@ For the detailed development record, boundaries, prompts, fallbacks, verificatio
 - The Three.js race chunk is still large, but it is lazy-loaded so the setup screen ships in a much smaller initial bundle. Further vendor splitting is a post-MVP optimisation.
 - Real-time multiplayer, careers, detailed damage, and user-created tracks are out of scope.
 
-## Three-minute demo
-
-- 0:00–0:25 — Show the problem: beginner AI education is abstract.
-- 0:25–0:55 — Configure tyre, fuel, aero, scanner, adaptive priority, and bot grid.
-- 0:55–1:25 — Launch the autonomous race and point out live telemetry and racing line.
-- 1:25–1:55 — Show the three systems disagreeing and request GPT-5.6’s explanation.
-- 1:55–2:25 — Choose a strategy and show the weather consequence.
-- 2:25–2:45 — Show the five-part debrief.
-- 2:45–3:00 — Change one setup value and show previous-vs-current comparison.
-
 ## Documentation
 
 - Product and visual design system: [DESIGN.md](DESIGN.md)
+- Contribution workflow: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Submission roadmap: [ROADMAP.md](ROADMAP.md)
 - Current PRD: docs/PRD_v2.md
 - Architecture: docs/architecture.md
+- Project structure and dependency rules: docs/project-structure.md
 - Gameplay loop: docs/gameplay-loop.md
 - AI learning systems: docs/ai-learning-systems.md
 - API contract: docs/api-contract.md

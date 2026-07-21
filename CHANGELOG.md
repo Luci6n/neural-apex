@@ -2,6 +2,19 @@
 
 All notable development changes to Neural Apex are recorded here.
 
+## 2026-07-22
+
+### Project structure
+
+- Reorganized the frontend into `app`, feature-owned scenes/screens, `shared/ui`, a public `simulation` boundary, typed race-engineer services, and an explicit styles entrypoint.
+- Extracted navigation and session-storage concerns from the application shell.
+- Split the FastAPI monolith into route wiring, Pydantic schemas, prompt policy, and OpenAI/streaming/fallback execution modules without changing public endpoints.
+- Added CONTRIBUTING, ROADMAP, and project-structure documentation; kept recording notes and submission checklists in the ignored private asset workspace.
+- Consolidated Vitest, pytest, and Playwright coverage under independent `tests/unit`, `tests/backend`, and `tests/e2e` directories with frontend/backend/all-test scripts.
+- Structured `.gitignore` rules by ecosystem and kept curated hackathon Markdown trackable while excluding local captures and video exports.
+- Expanded the verification baseline to 57 frontend assertions, 8 backend checks, and 3 browser flows.
+- Added a small curated README screenshot gallery while keeping raw captures and recording notes private.
+
 ## 2026-07-21
 
 ### Autonomous strategy product
