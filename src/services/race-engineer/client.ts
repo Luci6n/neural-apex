@@ -1,5 +1,5 @@
-import { evaluateSystemAdvice } from '../game/simulation'
-import type { AdviceAlignment, AdviceRecommendation, RaceConfig, RaceDecision, RaceSnapshot } from '../game/types'
+import { evaluateSystemAdvice } from '../../simulation'
+import type { AdviceAlignment, AdviceRecommendation, RaceConfig, RaceDecision, RaceSnapshot } from '../../simulation'
 
 export interface SystemVerdictResponse {
   recommendation: AdviceRecommendation

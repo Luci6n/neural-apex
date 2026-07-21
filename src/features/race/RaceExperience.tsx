@@ -1,16 +1,15 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { CircuitMap } from '../../components/CircuitMap'
-import { evaluateSystemAdvice, formatSeconds } from '../../game/simulation'
-import type { RaceConfig, RaceDecision, RaceSnapshot, StrategyCommand, TyreCompound } from '../../game/types'
-import { requestConflictExplanation } from '../../services/raceEngineer'
-import type { ExplanationResponse } from '../../services/raceEngineer'
-import { SafeRichText } from '../../components/SafeRichText'
-import { isWetTyre, tyreOptions, tyreProfiles } from '../../game/tyres'
+import { CircuitMap } from '../../shared/ui/CircuitMap'
+import { evaluateSystemAdvice, formatSeconds, isWetTyre, tyreOptions, tyreProfiles } from '../../simulation'
+import type { RaceConfig, RaceDecision, RaceSnapshot, StrategyCommand, TyreCompound } from '../../simulation'
+import { requestConflictExplanation } from '../../services/race-engineer/client'
+import type { ExplanationResponse } from '../../services/race-engineer/client'
+import { SafeRichText } from '../../shared/ui/SafeRichText'
 import { TimingTower } from './TimingTower'
-import { AISystemVisual } from '../../components/AISystemVisual'
+import { AISystemVisual } from '../../shared/ui/AISystemVisual'
 
 const RaceScene = lazy(() =>
-  import('../../components/RaceScene').then((module) => ({ default: module.RaceScene })),
+  import('./RaceScene').then((module) => ({ default: module.RaceScene })),
 )
 
 export function RaceExperience({

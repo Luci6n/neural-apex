@@ -1,9 +1,8 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import { advanceRace, cancelPitStop, createRace, evaluateSystemAdvice, requestPitStop, resolveDecision } from '../game/simulation'
-import { createPitLaneLayout, createTrackCurve, racingLineOffsetAt } from '../game/tracks'
-import type { RaceConfig, RaceDecision, RaceSnapshot, StrategyCommand, TyreCompound } from '../game/types'
+import { advanceRace, cancelPitStop, createPitLaneLayout, createRace, createTrackCurve, evaluateSystemAdvice, racingLineOffsetAt, requestPitStop, resolveDecision } from '../../simulation'
+import type { RaceConfig, RaceDecision, RaceSnapshot, StrategyCommand, TyreCompound } from '../../simulation'
 
 interface RaceSceneProps {
   config: RaceConfig

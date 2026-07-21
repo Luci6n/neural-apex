@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react'
 
-const IntroScene = lazy(() => import('../../components/IntroScene').then((module) => ({ default: module.IntroScene })))
-const IntroOrbScene = lazy(() => import('../../components/IntroScene').then((module) => ({ default: module.IntroOrbScene })))
+const IntroScene = lazy(() => import('./IntroScene').then((module) => ({ default: module.IntroScene })))
+const IntroOrbScene = lazy(() => import('./IntroScene').then((module) => ({ default: module.IntroOrbScene })))
 
 export function IntroScreen({ initialName, onEnter, onTutorial }: { initialName: string; onEnter: (name: string) => void; onTutorial: () => void }) {
   const [name, setName] = useState(initialName)

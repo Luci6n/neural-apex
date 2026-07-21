@@ -1,4 +1,4 @@
-import { AISystemVisual } from '../../components/AISystemVisual'
+import { AISystemVisual } from '../../shared/ui/AISystemVisual'
 
 const steps = [
   ['01', 'Configure', 'Set circuit, laps, tyre, fuel, aero, and AI priorities.', 'setup'],

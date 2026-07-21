@@ -1,6 +1,5 @@
-import { formatSeconds, formatSessionClock } from '../../game/simulation'
-import { tyreProfiles } from '../../game/tyres'
-import type { RaceConfig, RaceSnapshot, RacerState } from '../../game/types'
+import { formatSeconds, formatSessionClock, tyreProfiles } from '../../simulation'
+import type { RaceConfig, RaceSnapshot, RacerState } from '../../simulation'
 import type { CSSProperties } from 'react'
 
 export function TimingTower({ snapshot, config, principalName }: { snapshot: RaceSnapshot; config: RaceConfig; principalName: string }) {

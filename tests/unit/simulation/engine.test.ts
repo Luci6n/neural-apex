@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { advanceRace, applyCollisionOutcome, brakingRateFor, cancelPitStop, createRace, createRunRecord, createWeatherForecast, evaluateSystemAdvice, predictIncidentRisk, predictLapSeconds, recordPitSpeed, recordTrackLimitViolation, requestPitStop, resolveDecision, tyreStrategyWindowProgress } from './simulation'
-import type { RaceConfig } from './types'
+import { advanceRace, applyCollisionOutcome, brakingRateFor, cancelPitStop, createRace, createRunRecord, createWeatherForecast, evaluateSystemAdvice, predictIncidentRisk, predictLapSeconds, recordPitSpeed, recordTrackLimitViolation, requestPitStop, resolveDecision, tyreStrategyWindowProgress } from '../../../src/simulation/engine'
+import type { RaceConfig } from '../../../src/simulation/types'
 
 const config: RaceConfig = {
   mode: 'guided',

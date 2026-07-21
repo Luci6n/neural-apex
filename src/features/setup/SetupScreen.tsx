@@ -1,8 +1,7 @@
 import { useMemo } from 'react'
 import type { CSSProperties } from 'react'
-import { CircuitMap } from '../../components/CircuitMap'
-import { botPresetLabels, createBotGrid } from '../../game/config'
-import { createWeatherForecast, formatSeconds, predictIncidentRisk, predictLapSeconds } from '../../game/simulation'
+import { CircuitMap } from '../../shared/ui/CircuitMap'
+import { botPresetLabels, createBotGrid, createWeatherForecast, formatSeconds, predictIncidentRisk, predictLapSeconds } from '../../simulation'
 import type {
   AeroBalance,
   BotPreset,
@@ -18,10 +17,9 @@ import type {
   RunType,
   ScannerFocus,
   TyreCompound,
-} from '../../game/types'
-import { createTrackCurve, trackProfiles } from '../../game/tracks'
-import { tyreOptions, tyreProfiles } from '../../game/tyres'
-import { AISystemVisual } from '../../components/AISystemVisual'
+} from '../../simulation'
+import { createTrackCurve, trackProfiles, tyreOptions, tyreProfiles } from '../../simulation'
+import { AISystemVisual } from '../../shared/ui/AISystemVisual'
 
 export function SetupScreen({
   config,

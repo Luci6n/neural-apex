@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { createTrackCurve, trackProfiles } from '../game/tracks'
-import type { CircuitId } from '../game/types'
+import { createTrackCurve, trackProfiles } from '../../simulation'
+import type { CircuitId } from '../../simulation'
 
 export function CircuitMap({
   circuit,

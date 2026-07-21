@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
-import { cornerSeverityAt, createPitLaneLayout, createTrackCurve, racingLineOffsetAt, trackProfiles } from './tracks'
-import type { CircuitId } from './types'
+import { cornerSeverityAt, createPitLaneLayout, createTrackCurve, racingLineOffsetAt, trackProfiles } from '../../../src/simulation/tracks'
+import type { CircuitId } from '../../../src/simulation/types'
 
 type Point2 = { x: number; z: number }
 

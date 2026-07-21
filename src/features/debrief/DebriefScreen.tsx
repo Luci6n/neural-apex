@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
-import { createDebrief, createRace, formatSeconds } from '../../game/simulation'
-import type { RaceConfig, RaceSnapshot, RunRecord } from '../../game/types'
-import { requestDebrief } from '../../services/raceEngineer'
-import { SafeRichText } from '../../components/SafeRichText'
-import { tyreProfiles } from '../../game/tyres'
-import { trackProfiles } from '../../game/tracks'
+import { createDebrief, createRace, formatSeconds, trackProfiles, tyreProfiles } from '../../simulation'
+import type { RaceConfig, RaceSnapshot, RunRecord } from '../../simulation'
+import { requestDebrief } from '../../services/race-engineer/client'
+import { SafeRichText } from '../../shared/ui/SafeRichText'
 
 export function DebriefScreen({
   race,
