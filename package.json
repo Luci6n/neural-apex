@@ -9,10 +9,14 @@
     "dev:api": "python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8787",
     "build": "tsc -b && vite build",
     "lint": "tsc -b --pretty false",
-    "test": "vitest run src",
+    "test": "vitest run tests/unit",
+    "test:frontend": "vitest run tests/unit",
+    "test:backend": "python -m pytest tests/backend -q",
+    "test:all": "npm run test:frontend && npm run test:backend",
     "test:e2e": "playwright test",
     "preview": "vite preview --host 0.0.0.0",
-    "start": "python -m uvicorn backend.main:app --host 0.0.0.0 --port 8787"
+    "start": "python -m uvicorn backend.main:app --host 0.0.0.0 --port 8787",
+    "verify": "npm run lint && npm run test:all && npm run build"
   },
   "dependencies": {
     "@react-three/fiber": "^9.6.1",
@@ -26,7 +30,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.185.1",
     "@vitejs/plugin-react": "^6.0.3",
-    "concurrently": "^10.0.3",
+    "concurrently": "^9.2.4",
     "pngjs": "^7.0.0",
     "typescript": "^7.0.2",
     "vite": "^8.1.5",

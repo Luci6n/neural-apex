@@ -1,16 +1,44 @@
+# JavaScript dependencies
 node_modules/
-.agents/
+
+# Python environments and caches
 .venv/
 __pycache__/
-*.pyc
-dist/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment and secrets
 .env
+.env.*
+!.env.example
+
+# Build and generated TypeScript output
+dist/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Test and coverage output
 coverage/
 artifacts/
 test-results/
 playwright-report/
+
+# Logs
 *.log
-*.tsbuildinfo
-vite.config.js
-vite.config.d.ts
-.hackathon-assets
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local tools and editor state
+.agents/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Private hackathon captures, demo notes, and exports
+.hackathon-assets/

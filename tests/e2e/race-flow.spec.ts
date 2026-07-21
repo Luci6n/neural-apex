@@ -36,6 +36,7 @@ test('runs two autonomous strategies and compares their GPT debriefs', async ({ 
     if (message.type() === 'error') errors.push(message.text())
   })
   page.on('pageerror', (error) => errors.push(error.message))
+  await mockAiStreams(page)
 
   await page.goto('/?qaHooks=1')
   await expect(page.getByRole('heading', { name: 'NEURAL APEX' })).toBeVisible()
@@ -129,5 +130,38 @@ async function readProgress(page: import('@playwright/test').Page) {
       | { progress?: number }
       | undefined
     return diagnostics?.progress ?? 0
+  })
+}
+
+async function mockAiStreams(page: import('@playwright/test').Page) {
+  await page.route('**/api/explain/stream', async (route) => {
+    const data = {
+      alignment: 'conflict',
+      predictor: { recommendation: 'pit', evidence: 'Forecast rain is increasing.', confidence: 'medium' },
+      scanner: { recommendation: 'stay-out', evidence: 'The surface remains dry.', confidence: 'high' },
+      adaptiveDriver: { recommendation: 'stay-out', evidence: 'Track position remains valuable.', confidence: 'medium' },
+      engineerSummary: 'The systems use different evidence.',
+      tradeoff: 'The team principal owns the final call.',
+      explanation: 'The forecast supports an early stop, while live grip and track position support staying out.',
+      source: 'openai',
+    }
+    await route.fulfill({
+      contentType: 'application/x-ndjson',
+      body: JSON.stringify({ type: 'status', message: 'analysing' }) + '\n'
+        + JSON.stringify({ type: 'delta', delta: data.explanation }) + '\n'
+        + JSON.stringify({ type: 'complete', data }) + '\n',
+    })
+  })
+  await page.route('**/api/debrief/stream', async (route) => {
+    const data = {
+      debrief: 'The run connected the forecast, live pattern detection, adaptive response, and your pit-wall decision.',
+      source: 'openai',
+    }
+    await route.fulfill({
+      contentType: 'application/x-ndjson',
+      body: JSON.stringify({ type: 'status', message: 'analysing' }) + '\n'
+        + JSON.stringify({ type: 'delta', delta: data.debrief }) + '\n'
+        + JSON.stringify({ type: 'complete', data }) + '\n',
+    })
   })
 }
