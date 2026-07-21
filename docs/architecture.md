@@ -113,6 +113,6 @@ Refreshing during a live run intentionally loses the unfinished simulation and t
 
 ## Runtime
 
-During development, Vite proxies /api to FastAPI. In production, a multi-stage Docker image builds the frontend and FastAPI serves both the SPA and API on port 8787.
+During development, Vite proxies /api to FastAPI. The Docker deployment builds the frontend and lets FastAPI serve both the SPA and API on port 8787. The Vercel adapter in `api/index.py` re-exports the same FastAPI app as a Python Function; API-first rewrites preserve `/api/*`, while Vite static output and the SPA fallback own page routes.
 
 See `docs/project-structure.md` for the complete directory map, dependency direction, and placement rules.

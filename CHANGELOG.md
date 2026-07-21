@@ -11,9 +11,15 @@ All notable development changes to Neural Apex are recorded here.
 - Split the FastAPI monolith into route wiring, Pydantic schemas, prompt policy, and OpenAI/streaming/fallback execution modules without changing public endpoints.
 - Added CONTRIBUTING, ROADMAP, and project-structure documentation; kept recording notes and submission checklists in the ignored private asset workspace.
 - Consolidated Vitest, pytest, and Playwright coverage under independent `tests/unit`, `tests/backend`, and `tests/e2e` directories with frontend/backend/all-test scripts.
-- Structured `.gitignore` rules by ecosystem and kept curated hackathon Markdown trackable while excluding local captures and video exports.
-- Expanded the verification baseline to 57 frontend assertions, 8 backend checks, and 3 browser flows.
+- Structured `.gitignore` rules by ecosystem and kept the complete `.hackathon-assets` recording workspace private.
+- Expanded the verification baseline to 57 frontend assertions, 10 backend checks, and 3 browser flows.
 - Added a small curated README screenshot gallery while keeping raw captures and recording notes private.
+
+### Deployment
+
+- Added a Vercel ASGI adapter that reuses the existing FastAPI application without duplicating API logic.
+- Routed `/api/*` to the Python Function before the Vite SPA fallback and excluded local/test assets from the function bundle.
+- Added deployment-contract tests and documented Vercel environment and post-deploy health checks.
 
 ## 2026-07-21
 

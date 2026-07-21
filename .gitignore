@@ -35,6 +35,7 @@ pnpm-debug.log*
 
 # Local tools and editor state
 .agents/
+.vercel/
 .idea/
 .vscode/
 .DS_Store

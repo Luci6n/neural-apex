@@ -52,7 +52,7 @@ The Playwright suite covers:
 5. a second stay-out run;
 6. responsive strategy-window layout and AI-rail/telemetry separation.
 
-Latest automated result: 57/57 Vitest assertions, 8/8 pytest checks, and 3/3 Playwright flows pass.
+Latest automated result: 57/57 Vitest assertions, 10/10 pytest checks, and 3/3 Playwright flows pass.
 
 ## API
 

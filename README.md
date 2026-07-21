@@ -72,6 +72,7 @@ The systems deliberately disagree. A prediction can warn about future rain while
 - Guided beginner tutorial language
 - FastAPI boundary for OpenAI calls
 - Docker-based single-service production runtime
+- Vercel hybrid deployment with a Vite SPA and streamed FastAPI Python Function
 - Unit, E2E, API, build, and measured WebGL verification
 
 ## Product flow
@@ -261,7 +262,7 @@ Current verified checks:
 
 - TypeScript: pass
 - Frontend unit, UI, service, simulation, and topology tests: 57/57 pass
-- Backend endpoint, schema, streaming, parsing, and fallback tests: 8/8 pass
+- Backend endpoint, schema, streaming, parsing, fallback, and Vercel contract tests: 10/10 pass
 - Production build: pass
 - Playwright autonomous flows: 3/3 pass
 - Live OpenAI request through FastAPI: pass, source openai

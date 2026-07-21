@@ -6,6 +6,8 @@ Neural Apex uses feature-first frontend organization around a deterministic simu
 
 ~~~text
 neural-apex/
+├── api/
+│   └── index.py                Vercel ASGI adapter for the existing FastAPI app
 ├── backend/
 │   ├── main.py                 FastAPI routes, health, streaming responses, SPA serving
 │   ├── schemas.py              Pydantic request and structured-output schemas
@@ -45,6 +47,7 @@ neural-apex/
 ├── CONTRIBUTING.md
 ├── DESIGN.md
 ├── ROADMAP.md
+├── vercel.json                 API-first function routing and Vite SPA fallback
 └── README.md
 ~~~
 

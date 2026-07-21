@@ -1,0 +1,14 @@
+.agents/
+.codex/
+.git/
+.hackathon-assets/
+.venv/
+artifacts/
+dist/
+docs/
+node_modules/
+playwright-report/
+test-results/
+tests/
+*.log
+*.tsbuildinfo
