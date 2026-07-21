@@ -16,7 +16,11 @@ There are no steering, throttle, braking, or boost controls. Player skill comes 
 
 ![Neural Apex strategy setup with forecast, AI crew, circuit, tyre, aero, and autonomous rival controls](docs/assets/screenshots/strategy-setup.png)
 
-*Configure a reproducible experiment: circuit, session length, compound, fuel, aero, weather policy, driver style, scanner allocation, and rival grid all change the calculated run.*
+*Review the complete preflight: seeded forecast, Predictor estimate, scanner allocation, rival model, circuit profile, and calculated setup impact.*
+
+![Neural Apex detailed strategy controls for circuit, session, tyres, fuel, aero, weather policy, adaptive priority, and driver style](docs/assets/screenshots/strategy-controls.png)
+
+*Configure the experiment in detail. Every selected variable changes calculated pace, wear, grip, fuel use, detection, traffic behaviour, or incident risk.*
 
 ![Neural Apex autonomous 3D race with timing, telemetry, AI evidence, and pit-wall controls](docs/assets/screenshots/autonomous-race.png)
 
