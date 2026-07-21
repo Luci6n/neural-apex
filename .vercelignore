@@ -1,5 +1,8 @@
 .agents/
 .codex/
+.env
+.env.*
+!.env.example
 .git/
 .hackathon-assets/
 .venv/

@@ -12,7 +12,7 @@ All notable development changes to Neural Apex are recorded here.
 - Added CONTRIBUTING, ROADMAP, and project-structure documentation; kept recording notes and submission checklists in the ignored private asset workspace.
 - Consolidated Vitest, pytest, and Playwright coverage under independent `tests/unit`, `tests/backend`, and `tests/e2e` directories with frontend/backend/all-test scripts.
 - Structured `.gitignore` rules by ecosystem and kept the complete `.hackathon-assets` recording workspace private.
-- Expanded the verification baseline to 57 frontend assertions, 10 backend checks, and 3 browser flows.
+- Expanded the verification baseline to 57 frontend assertions, 11 backend checks, and 3 browser flows.
 - Added a small curated README screenshot gallery while keeping raw captures and recording notes private.
 
 ### Deployment

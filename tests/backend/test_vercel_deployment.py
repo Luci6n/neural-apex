@@ -21,3 +21,11 @@ def test_vercel_routes_api_before_spa_fallback():
         "destination": "/api/index",
     }
     assert config["rewrites"][-1]["destination"] == "/index.html"
+
+
+def test_vercel_upload_excludes_local_secrets_and_private_assets():
+    ignored = (ROOT / ".vercelignore").read_text(encoding="utf-8").splitlines()
+    assert ".env" in ignored
+    assert ".env.*" in ignored
+    assert "!.env.example" in ignored
+    assert ".hackathon-assets/" in ignored

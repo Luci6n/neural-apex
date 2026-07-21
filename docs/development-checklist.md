@@ -116,7 +116,7 @@ This file is the persistent implementation checklist for the current competition
 - [x] Document frontend deterministic simulation vs FastAPI language boundary.
 - [x] Document that every GPT strategy/debrief call receives full relevant race context and validated structured output.
 - [x] Add gameplay calculation/mode guide and seeded-streaming ADR.
-- [x] Update verification evidence for the current 57-frontend/10-backend/3-E2E checkpoint.
+- [x] Update verification evidence for the current 57-frontend/11-backend/3-E2E checkpoint.
 - [ ] Run topology tests, unit tests, TypeScript, production build, E2E, live API, WebGL QA, and Docker.
 - [x] Checkpoint commit: 7ec46c7.
 - [ ] Commit penalty/navigation/circuit/scenery pass.
